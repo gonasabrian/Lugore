@@ -1,173 +1,182 @@
 <!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LUGORE</title>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LUGORE - Ride App</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-body{font-family:Arial;margin:0;background:#f4f6f8;color:#111}
-header{background:#0b6b3a;color:#fff;padding:14px;text-align:center;font-size:22px;font-weight:bold}
-.card{background:#fff;margin:12px;padding:14px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
-input,select,button{width:100%;padding:11px;margin:6px 0;border-radius:8px;border:1px solid #ddd;font-size:15px;box-sizing:border-box}
-button{background:#0b6b3a;color:#fff;border:0;font-weight:bold;cursor:pointer}
-button.sec{background:#eee;color:#111}
-.tabs{display:flex;gap:8px;padding:0 12px}.tabs button{flex:1;background:#fff;color:#111;border:1px solid #ddd}
-.tabs button.active{background:#0b6b3a;color:#fff}
-table{width:100%;border-collapse:collapse;font-size:14px}td,th{border-bottom:1px solid #eee;padding:8px;text-align:left}
-.stat{display:flex;gap:10px}.stat div{flex:1;background:#eaf7ef;padding:12px;border-radius:10px;text-align:center}
-.stat b{font-size:20px;display:block}
+*{box-sizing:border-box;font-family:Arial,sans-serif}
+body{margin:0;background:#0f172a;color:white;padding:16px}
+.header{text-align:center;margin-bottom:16px}
+.header h1{font-size:32px;margin:0;color:#facc15}
+.header p{color:#cbd5e1;margin:4px 0 0}
+.card{background:#1e293b;border-radius:16px;padding:16px;margin-bottom:14px}
+.tabs{display:flex;gap:8px;margin-bottom:14px}
+.tabs button{flex:1;padding:12px;border:0;border-radius:12px;font-weight:bold;cursor:pointer}
+.tabs button.active{background:#facc15;color:black}
+.tabs button.inactive{background:#334155;color:white}
+label{font-size:13px;color:#cbd5e1}
+input,select{width:100%;padding:12px;border-radius:10px;border:0;margin:6px 0 12px;background:#0f172a;color:white;outline:1px solid #334155}
+.btn{width:100%;padding:14px;border:0;border-radius:12px;background:#facc15;color:black;font-weight:bold;font-size:16px;cursor:pointer}
+.btn-green{background:#22c55e;color:white}
+.btn-red{background:#ef4444;color:white}
+.ride{background:#0f172a;border:1px solid #334155;border-radius:12px;padding:12px;margin-bottom:10px}
+.ride b{color:#facc15}
+.small{font-size:12px;color:#94a3b8}
+.status{padding:4px 10px;border-radius:20px;font-size:12px;font-weight:bold;display:inline-block}
+.pending{background:#facc15;color:black}
+.accepted{background:#22c55e;color:white}
+.completed{background:#334155;color:white}
 .hidden{display:none}
-</style></head>
+</style>
+</head>
 <body>
-<div id="toast" style="display:none;position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:20px;z-index:99;font-size:14px"></div>
-<header>🌿 LUGORE - Savings Group</header>
 
-<div id="loginPage" class="card">
-<h2>Login</h2>
-<input id="u" placeholder="Username - admin" autocomplete="username">
-<input id="p" type="password" placeholder="Password - admin123" autocomplete="current-password">
-<button type="button" onclick="login()">Login</button>
-<p id="loginMsg" style="color:red"></p>
-<p style="font-size:13px;color:#666">Admin: admin / admin123</p>
+<div class="header">
+  <h1>🛵 LUGORE</h1>
+  <p>Fast Boda & Ride in Kampala</p>
+  <p class="small" id="conn">Connecting...</p>
 </div>
-
-<div id="app" class="hidden">
-<div class="card"><div class="stat">
-<div><span>Total Members</span><b id="cMembers">0</b></div>
-<div><span>Total Savings</span><b id="cSavings">0</b></div>
-<div><span>Active Loans</span><b id="cLoans">0</b></div>
-</div><button class="sec" type="button" onclick="logout()">Logout</button></div>
 
 <div class="tabs">
-<button type="button" id="tMembers" class="active" onclick="showTab('members')">Members</button>
-<button type="button" id="tSavings" onclick="showTab('savings')">Savings</button>
-<button type="button" id="tLoans" onclick="showTab('loans')">Loans</button>
+  <button id="tabRider" class="active" onclick="showTab('rider')">🧑 RIDER - Book Ride</button>
+  <button id="tabDriver" class="inactive" onclick="showTab('driver')">🏍️ DRIVER</button>
 </div>
 
-<div id="tab-members" class="card">
-<h3>Add Member</h3>
-<input id="mName" placeholder="Full Name / Username">
-<input id="mPhone" placeholder="Phone e.g 0700000000">
-<input id="mVillage" placeholder="Village / Role">
-<button type="button" onclick="addMember()">Add Member</button>
-<h3>Members List</h3><div id="membersList">Loading...</div>
+<!-- RIDER -->
+<div id="riderView">
+  <div class="card">
+    <h3 style="margin:0 0 10px">Book a Ride</h3>
+    <label>Your Name</label>
+    <input id="riderName" placeholder="e.g. Brian Gona">
+    <label>Phone</label>
+    <input id="riderPhone" placeholder="e.g. 0700 123456">
+    <label>Pickup Location</label>
+    <input id="pickup" placeholder="e.g. Kampala Road, Nakasero">
+    <label>Dropoff Location</label>
+    <input id="dropoff" placeholder="e.g. Ntinda, Kigowa">
+    <button class="btn" onclick="bookRide()">Request Ride 🚀</button>
+    <p id="bookMsg" class="small"></p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 10px">My Rides / Live Rides</h3>
+    <button class="btn" style="background:#334155;color:white" onclick="loadRides()">Refresh Rides 🔄</button>
+    <div id="ridesList" style="margin-top:12px"></div>
+  </div>
 </div>
 
-<div id="tab-savings" class="card hidden">
-<h3>Add Savings</h3>
-<select id="sMember"></select>
-<input id="sAmount" type="number" placeholder="Amount UGX">
-<input id="sDate" type="date">
-<button type="button" onclick="addSavings()">Save Savings</button>
-<h3>Recent Savings</h3><div id="savingsList"></div>
-</div>
+<!-- DRIVER -->
+<div id="driverView" class="hidden">
+  <div class="card">
+    <h3 style="margin:0 0 10px">Driver Registration</h3>
+    <label>Driver Name</label>
+    <input id="driverName" placeholder="e.g. John Kato">
+    <label>Phone</label>
+    <input id="driverPhone" placeholder="e.g. 0770 123456">
+    <label>Vehicle</label>
+    <input id="vehicle" placeholder="e.g. Bajaj Boxer - Boda">
+    <label>Plate Number</label>
+    <input id="plate" placeholder="e.g. UFG 123A">
+    <button class="btn btn-green" onclick="registerDriver()">Register as Driver ✅</button>
+    <p id="driverMsg" class="small"></p>
+  </div>
 
-<div id="tab-loans" class="card hidden">
-<h3>Give Loan</h3>
-<select id="lMember"></select>
-<input id="lAmount" type="number" placeholder="Loan Amount UGX">
-<input id="lGuarantor" placeholder="Guarantor Name">
-<input id="lDate" type="date">
-<button type="button" onclick="addLoan()">Record Loan</button>
-<h3>Loans List</h3><div id="loansList"></div>
-</div>
+  <div class="card">
+    <h3 style="margin:0 0 10px">Available Rides - Pending</h3>
+    <button class="btn" style="background:#334155;color:white" onclick="loadRides()">Refresh 🔄</button>
+    <div id="driverRidesList" style="margin-top:12px"></div>
+  </div>
 </div>
 
 <script>
-const SUPABASE_URL = "https://hgxjjrciyxwiblnqkmnq.supabase.co";
-const SUPABASE_KEY = "xcvscewykexjubvdykmm";
-const headers = {"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,"Content-Type":"application/json","Prefer":"return=representation"};
+const SUPABASE_URL = "https://mpndeajnoxrmvpxtbrlo.supabase.co";
+const SUPABASE_KEY = "sb_publishable_DHyal88n3SWkgeOn29k2tQ__AhyXEoD";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-async function q(table, method="GET", body=null){
-  try{
-    let r = await fetch(SUPABASE_URL+"/rest/v1/"+table, {method, headers, body: body?JSON.stringify(body):null});
-    let j = await r.json();
-    console.log(table, j);
-    return j;
-  }catch(e){ console.log(e); return []; }
+let currentDriverId = localStorage.getItem('lugore_driver_id') || null;
+
+function showTab(tab){
+  document.getElementById('riderView').classList.toggle('hidden', tab!=='rider');
+  document.getElementById('driverView').classList.toggle('hidden', tab!=='driver');
+  document.getElementById('tabRider').className = tab==='rider' ? 'active' : 'inactive';
+  document.getElementById('tabDriver').className = tab==='driver' ? 'active' : 'inactive';
+  loadRides();
 }
-function getLocal(k){ try{return JSON.parse(localStorage.getItem(k)||"[]")}catch(e){return []} }
-function saveLocal(k,v){ localStorage.setItem(k, JSON.stringify(v)) }
-function showMsg(t){ let e=document.getElementById('toast'); e.innerText=t; e.style.display='block'; setTimeout(()=>e.style.display='none',3500); }
-function login(){
-  let u=document.getElementById('u').value.trim().toLowerCase();
-  let p=document.getElementById('p').value.trim();
-  if(u==="admin" && p==="admin123"){
-    document.getElementById('loginPage').classList.add('hidden');
-    document.getElementById('app').classList.remove('hidden');
-    loadAll();
-  } else { document.getElementById('loginMsg').innerText="Wrong - use admin / admin123"; }
+
+async function bookRide(){
+  const name = document.getElementById('riderName').value.trim();
+  const phone = document.getElementById('riderPhone').value.trim();
+  const pickup = document.getElementById('pickup').value.trim();
+  const dropoff = document.getElementById('dropoff').value.trim();
+  if(!name || !phone || !pickup || !dropoff){ alert('Please fill all fields'); return; }
+  document.getElementById('bookMsg').innerText = 'Sending...';
+  const { data, error } = await supabaseClient.from('rides').insert([{rider_name:name, rider_phone:phone, pickup:pickup, dropoff:dropoff, status:'pending'}]).select();
+  if(error){ document.getElementById('bookMsg').innerText = 'Error: '+error.message; }
+  else{
+    document.getElementById('bookMsg').innerText = '✅ Ride requested! Drivers will see it now.';
+    document.getElementById('pickup').value=''; document.getElementById('dropoff').value='';
+    loadRides();
+  }
 }
-function logout(){ location.reload(); }
-function showTab(t){
-  ['members','savings','loans'].forEach(x=>{
-    document.getElementById('tab-'+x).classList.toggle('hidden', x!==t);
-    document.getElementById('t'+x[0].toUpperCase()+x.slice(1)).classList.toggle('active', x===t);
-  });
+
+async function registerDriver(){
+  const name = document.getElementById('driverName').value.trim();
+  const phone = document.getElementById('driverPhone').value.trim();
+  const vehicle = document.getElementById('vehicle').value.trim();
+  const plate = document.getElementById('plate').value.trim();
+  if(!name || !phone){ alert('Fill name and phone'); return; }
+  const { data, error } = await supabaseClient.from('drivers').insert([{full_name:name, phone:phone, vehicle:vehicle, plate_number:plate, is_online:true}]).select();
+  if(error){ document.getElementById('driverMsg').innerText = 'Error: '+error.message; }
+  else{
+    currentDriverId = data[0].id;
+    localStorage.setItem('lugore_driver_id', currentDriverId);
+    document.getElementById('driverMsg').innerText = '✅ Registered! You are now online. You can accept rides below.';
+    loadRides();
+  }
 }
-async function loadAll(){
-  let members = await q("members?select=*&order=id.desc");
-  let savings = await q("savings?select=*&order=id.desc&limit=50");
-  let loans = await q("loans?select=*&order=id.desc&limit=50");
-  if(!Array.isArray(members)) members=[];
-  if(!Array.isArray(savings)) savings=[];
-  if(!Array.isArray(loans)) loans=[];
-  let localM = getLocal("lugore_members");
-  let localS = getLocal("lugore_savings");
-  let localL = getLocal("lugore_loans");
-  if(members.length===0 && localM.length>0) members = localM;
-  if(savings.length===0 && localS.length>0) savings = localS;
-  if(loans.length===0 && localL.length>0) loans = localL;
-  document.getElementById('cMembers').innerText=members.length;
-  document.getElementById('cSavings').innerText=savings.reduce((a,b)=>a+(Number(b.amount)||0),0).toLocaleString();
-  document.getElementById('cLoans').innerText=loans.length;
-  let mHtml = members.length? "<table><tr><th>Name</th><th>Phone</th><th>Role</th></tr>"+members.map(m=>`<tr><td>${m.username||m.full_name||m.name||''}</td><td>${m.phone||''}</td><td>${m.role||''}</td></tr>`).join("")+"</table>" : "No members yet. Add one above.";
-  document.getElementById('membersList').innerHTML=mHtml;
-  let opts = members.map(m=>`<option value="${m.username||m.full_name||m.name}">${m.username||m.full_name||m.name}</option>`).join("");
-  document.getElementById('sMember').innerHTML=opts;
-  document.getElementById('lMember').innerHTML=opts;
-  document.getElementById('savingsList').innerHTML = savings.length? savings.map(s=>`${s.member} - ${Number(s.amount).toLocaleString()} UGX - ${s.date||s.month||''}<hr>`).join("") : "No savings yet";
-  document.getElementById('loansList').innerHTML = loans.length? loans.map(l=>`${l.member} - ${Number(l.amount).toLocaleString()} UGX - ${l.status||''} - Guarantor: ${l.guarantor||''}<hr>`).join("") : "No loans yet";
+
+async function loadRides(){
+  const { data, error } = await supabaseClient.from('rides').select('*').order('created_at',{ascending:false}).limit(20);
+  if(error){ document.getElementById('conn').innerText = '❌ Not connected: '+error.message; return; }
+  document.getElementById('conn').innerText = '✅ Connected to Supabase - ' + data.length + ' rides';
+  renderRides(data, 'ridesList', false);
+  renderRides(data, 'driverRidesList', true);
 }
-async function addMember(){
-  let name=document.getElementById('mName').value.trim();
-  let phone=document.getElementById('mPhone').value.trim();
-  let village=document.getElementById('mVillage').value.trim();
-  if(!name) return showMsg("Please enter name");
-  // YOUR TABLE NEEDS: username + password
-  let newM = {username:name, password:"1234", phone:phone, role:village||"member"};
-  let localM = getLocal("lugore_members"); localM.unshift(newM); saveLocal("lugore_members", localM);
-  let res = await q("members","POST", newM);
-  if(res && res.message) showMsg("Saved locally. Supabase: "+res.message);
-  else showMsg("Member added!");
-  document.getElementById('mName').value=""; document.getElementById('mPhone').value=""; document.getElementById('mVillage').value="";
-  loadAll();
+
+function renderRides(rides, elementId, isDriver){
+  const el = document.getElementById(elementId);
+  if(!rides || rides.length===0){ el.innerHTML='<p class="small">No rides yet.</p>'; return; }
+  el.innerHTML = rides.map(r => `
+    <div class="ride">
+      <b>${r.pickup} → ${r.dropoff}</b><br>
+      <span class="small">Rider: ${r.rider_name} - ${r.rider_phone}</span><br>
+      <span class="status ${r.status}">${r.status.toUpperCase()}</span>
+      <span class="small"> • ${new Date(r.created_at).toLocaleString()}</span>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        ${isDriver && r.status==='pending' ? `<button class="btn btn-green" style="padding:10px" onclick="acceptRide('${r.id}')">Accept Ride</button>` : ''}
+        ${r.status==='accepted' ? `<button class="btn" style="padding:10px;background:#334155;color:white" onclick="completeRide('${r.id}')">Mark Completed</button>` : ''}
+      </div>
+    </div>
+  `).join('');
 }
-async function addSavings(){
-  if(!document.getElementById('sAmount').value) return showMsg("Please enter amount");
-  let amt = Number(document.getElementById('sAmount').value);
-  let mid = document.getElementById('sMember').value;
-  let d = document.getElementById('sDate').value||new Date().toISOString().slice(0,10);
-  // YOUR TABLE NEEDS: member, amount, month, shares, date
-  let payload = {member:mid, amount:amt, month:d.slice(0,7), shares:1, date:d};
-  let localS = getLocal("lugore_savings"); localS.unshift(payload); saveLocal("lugore_savings", localS);
-  let res = await q("savings","POST", payload);
-  if(res && res.message) showMsg("Saved locally. Supabase: "+res.message);
-  else showMsg("Savings saved!");
-  loadAll();
+
+async function acceptRide(id){
+  if(!currentDriverId){ alert('Register as driver first'); showTab('driver'); return; }
+  await supabaseClient.from('rides').update({status:'accepted', driver_id:currentDriverId}).eq('id',id);
+  loadRides();
 }
-async function addLoan(){
-  if(!document.getElementById('lAmount').value) return showMsg("Please enter loan amount");
-  let amt = Number(document.getElementById('lAmount').value);
-  let mid = document.getElementById('lMember').value;
-  let guarantor = document.getElementById('lGuarantor').value.trim();
-  let d = document.getElementById('lDate').value||new Date().toISOString().slice(0,10);
-  // YOUR TABLE NEEDS: member, amount, guarantor, status, balance
-  let payload = {member:mid, amount:amt, guarantor:guarantor||"", status:"active", balance:amt};
-  let localL = getLocal("lugore_loans"); localL.unshift(payload); saveLocal("lugore_loans", localL);
-  let res = await q("loans","POST", payload);
-  if(res && res.message) showMsg("Saved locally. Supabase: "+res.message);
-  else showMsg("Loan recorded!");
-  loadAll();
+
+async function completeRide(id){
+  await supabaseClient.from('rides').update({status:'completed'}).eq('id',id);
+  loadRides();
 }
-document.getElementById('sDate').value=new Date().toISOString().slice(0,10);
-document.getElementById('lDate').value=new Date().toISOString().slice(0,10);
+
+// Auto load + realtime
+loadRides();
+supabaseClient.channel('rides-live').on('postgres_changes',{event:'*',schema:'public',table:'rides'},()=>loadRides()).subscribe();
+setInterval(loadRides, 8000);
 </script>
-</body></html>
+</body>
+</html>
