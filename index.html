@@ -1,120 +1,372 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LUGORE SACCO</title>
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-body{font-family:Arial;background:#f2f2f2;margin:0;padding:15px}
-.card{background:#fff;padding:20px;border-radius:12px;max-width:450px;margin:20px auto;box-shadow:0 2px 10px #0002}
-input,select,button{width:100%;padding:12px;margin:6px 0;border-radius:8px;border:1px solid #ccc;font-size:16px;box-sizing:border-box}
-button{background:#0a7a42;color:#fff;border:none;font-weight:bold;cursor:pointer}
-button.red{background:#c0392b} button.blue{background:#2471a3}
-h2{text-align:center;color:#0a7a42} .hidden{display:none}
-table{width:100%;border-collapse:collapse;font-size:14px} td,th{border-bottom:1px solid #eee;padding:8px;text-align:left}
+body{background:#FBE9E9; font-family:Inter,sans-serif; color:#4A0000;}
+.gold-gradient{background: linear-gradient(135deg,#B94A48,#D67A7A);}
+.gold-text{background: linear-gradient(135deg,#800000,#B94A48); -webkit-background-clip:text; -webkit-text-fill-color:transparent;}
+.gold-border{border:1px solid rgba(185,74,72,0.25);}
+.gold-card{background:#FFFFFF; box-shadow:0 4px 20px rgba(128,0,0,0.08);}
+.gold-btn{background: linear-gradient(135deg,#A52A2A,#C25A5A); color:#fff; font-weight:900; box-shadow:0 6px 20px rgba(165,42,42,0.25);}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+.spin{animation:spin 0.8s linear infinite}
 </style>
 </head>
-<body>
+<body class="p-2 text-xs">
 
-<div id="loginPage" class="card">
-<h2>LUGORE SACCO</h2>
-<p style="text-align:center">Login with your number</p>
-<input id="username" placeholder="Username e.g. 18063 or admin">
-<input id="password" type="password" placeholder="Password">
-<button onclick="login()">LOGIN</button>
-<p id="loginMsg" style="color:red;text-align:center"></p>
-<p style="font-size:12px;text-align:center;color:#888">Admin: admin / admin<br>Member: your number / your number<br>e.g. Gonasa Brian: 18063 / 18063</p>
+<div id="globalLoading" class="hidden fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center backdrop-blur-sm">
+<div class="bg-white gold-border p-8 rounded-[2rem] text-center min-w-[180px]">
+<div class="w-14 h-14 border-4 border-[#B94A48]/20 border-t-[#800000] rounded-full spin mx-auto"></div>
+<div class="gold-text font-black text-[12px] mt-4 tracking-widest">LOADING...</div>
+</div>
 </div>
 
-<div id="appPage" class="card hidden">
-<h2 id="welcome">Welcome</h2>
-<p id="userInfo" style="text-align:center"></p>
-<button class="blue" onclick="loadMyData()">Refresh My Savings & Loans</button>
-<h3>My Savings</h3>
-<div id="mySavings">Loading...</div>
-<h3>My Loans</h3>
-<div id="myLoans">Loading...</div>
-
-<div id="adminBox" class="hidden">
-<hr>
-<h3>Admin - Add Saving</h3>
-<input id="s_member" placeholder="Member name e.g. Gonasa Brian">
-<input id="s_amount" type="number" placeholder="Amount">
-<input id="s_month" placeholder="Month e.g. Nov 2026">
-<button onclick="addSaving()">Add Saving</button>
-<h3>Admin - All Members</h3>
-<div id="allMembers"></div>
+<!-- LOGIN -->
+<div id="loginPage" class="min-h-screen flex items-center justify-center">
+<div class="bg-white gold-border p-8 rounded-[2rem] w-full max-w-sm shadow-xl">
+<div class="text-center mb-8">
+<img id="logoLogin" src="https://drive.google.com/uc?export=view&id=1vXsQNbFt4attK5f49ZCR_8p4BI98ucFP" onerror="this.style.display='none';document.getElementById('logoFallback').style.display='flex'" class="w-24 h-24 rounded-[1.7rem] mx-auto object-cover gold-border bg-white" alt="LUGORE">
+<div id="logoFallback" style="display:none" class="w-24 h-24 rounded-[1.7rem] mx-auto gold-gradient items-center justify-center text-white font-black text-4xl">L</div>
+<h1 class="gold-text font-black text-xl tracking-widest mt-4">LUGORE STAFF<br>SAVINGS GROUP</h1></div>
+<input id="username" placeholder="Username" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl mb-3 text-[#4A0000] text-[13px]">
+<input id="password" type="password" placeholder="Password" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl mb-5 text-[#4A0000] text-[13px]">
+<button onclick="doLogin()" class="w-full gold-btn p-4 rounded-2xl text-[13px]">LOGIN</button>
+<div id="loginMsg" class="text-red-500 text-center mt-4 text-[10px]"></div>
+<p class="text-center text-[10px] text-[#800000]/60 mt-3">Admin: admin / admin<br>Gonasa Brian: 18063 / 18063</p>
+</div>
 </div>
 
-<button class="red" onclick="logout()">Logout</button>
+<!-- APP -->
+<div id="appPage" class="hidden">
+<div class="flex justify-between items-center bg-white gold-border p-4 rounded-[1.5rem] mb-3 shadow-sm">
+<div class="flex items-center gap-3">
+<img src="https://drive.google.com/uc?export=view&id=1vXsQNbFt4attK5f49ZCR_8p4BI98ucFP" onerror="this.style.display='none'" class="w-9 h-9 rounded-full object-cover gold-border bg-white">
+<div><div id="welcomeUser" class="font-black text-[#4A0000] text-sm"></div><div id="roleBadge" class="gold-text text-[9px] font-bold"></div></div>
+</div>
+<div class="flex gap-2"><button onclick="logoutUser()" class="bg-red-50 text-red-600 border border-red-200 px-5 py-2 rounded-full font-black text-[10px]">LOGOUT</button></div>
+</div>
+
+<div id="memberTabs" class="hidden flex gap-2 mb-4 overflow-x-auto">
+<button onclick="showMemberTab('home')" class="m-tab gold-btn px-6 py-3 rounded-full font-black text-[11px]">HOME</button>
+<button onclick="showMemberTab('savings')" class="m-tab bg-white text-[#800000]/60 gold-border px-6 py-3 rounded-full font-black text-[11px]">SAVINGS</button>
+<button onclick="showMemberTab('loans')" class="m-tab bg-white text-[#800000]/60 gold-border px-6 py-3 rounded-full font-black text-[11px]">LOANS</button>
+</div>
+<div id="adminTabs" class="hidden flex gap-2 mb-4 overflow-x-auto">
+<button onclick="showAdminTab('home')" class="a-tab gold-btn px-5 py-3 rounded-full font-black text-[10px]">HOME</button>
+<button onclick="showAdminTab('savings')" class="a-tab bg-white text-[#800000]/60 gold-border px-5 py-3 rounded-full font-black text-[10px]">SAVINGS</button>
+<button onclick="showAdminTab('loans')" class="a-tab bg-white text-[#800000]/60 gold-border px-5 py-3 rounded-full font-black text-[10px]">LOANS</button>
+<button onclick="showAdminTab('logs')" class="a-tab bg-white text-[#800000]/60 gold-border px-5 py-3 rounded-full font-black text-[10px]">LOGIN LOGS</button>
+</div>
+
+<!-- MEMBER HOME -->
+<div id="member-home" class="member-page space-y-4 hidden">
+<div class="gold-gradient p-3 rounded-[1.2rem] text-white"><h3 class="font-black text-[11px]">MY SAVINGS</h3></div>
+<div class="grid grid-cols-3 gap-3">
+<div class="gold-card gold-border p-4 rounded-[1.6rem]"><div class="text-[#800000]/50 text-[8px]">SHARES</div><div id="mShares" class="gold-text font-black text-[20px] mt-1">0</div></div>
+<div class="bg-white gold-border p-4 rounded-[1.6rem]"><div class="text-[#800000]/40 text-[8px]">TOTAL SAVINGS</div><div id="mTotalSaved" class="text-[#4A0000] font-black text-[11px] mt-1">UGX 0</div></div>
+<div class="gold-gradient p-4 rounded-[1.6rem]"><div class="text-white/70 text-[8px]">PERFORMANCE</div><div id="mPerf" class="text-white font-black text-[11px] mt-1">0%</div></div>
+</div>
+<div class="gold-gradient p-3 rounded-[1.2rem] text-white mt-2"><h3 class="font-black text-[11px]">MY LOANS</h3></div>
+<div class="grid grid-cols-3 gap-3">
+<div class="gold-card gold-border p-4 rounded-[1.6rem]"><div class="text-[#800000]/50 text-[8px]">PRINCIPAL</div><div id="mHomeLoanPrincipal" class="gold-text font-black text-[13px] mt-1">UGX 0</div></div>
+<div class="bg-white gold-border p-4 rounded-[1.6rem] border-l-4 border-l-red-500"><div class="text-red-500/70 text-[8px]">OUTSTANDING</div><div id="mHomeLoanOutstanding" class="text-red-600 font-black text-[13px] mt-1">UGX 0</div></div>
+<div class="bg-white gold-border p-4 rounded-[1.6rem]"><div class="text-[#800000]/40 text-[8px]">TOTAL DUE</div><div id="mHomeLoanTotalDue" class="text-[#4A0000] font-black text-[12px] mt-1">UGX 0</div></div>
+</div>
+<div class="gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px] mb-3">MY SAVINGS LIST</h3><div id="mSavingsList" class="text-[10px] space-y-2"></div><div id="mSavingsTotal" class="gold-gradient text-white font-black mt-3 p-3 rounded-xl text-center text-[10px]"></div></div>
+<div class="gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px] mb-3">MY LOANS LIST</h3><div id="mHomeLoansCards" class="space-y-3 text-[10px]"></div></div>
+</div>
+
+<!-- MEMBER SAVINGS -->
+<div id="member-savings" class="member-page hidden space-y-4">
+<div class="gold-gradient p-5 rounded-[1.6rem] text-white text-center"><div class="text-white/70 text-[9px] font-bold tracking-widest">TOTAL SAVINGS</div><div id="mTotalSavingsTab" class="font-black text-[26px] mt-1">UGX 0</div><div id="mSavingsSubTab" class="text-white/80 text-[9px] mt-1 font-bold">Shares: 0 | Performance: 0%</div></div>
+<div class="gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px] mb-3">SAVINGS DETAILS</h3><div id="mSavingsList2" class="text-[10px] space-y-2"></div></div>
+</div>
+
+<!-- MEMBER LOANS -->
+<div id="member-loans" class="member-page hidden space-y-4">
+<div id="guarantorRequestsBox" class="hidden gold-card gold-border rounded-[1.6rem] p-4 border-2 border-[#B94A48]/40"><h3 class="gold-text font-black text-[12px] mb-3">GUARANTOR REQUESTS</h3><div id="guarantorRequestsList" class="space-y-3"></div></div>
+<div class="grid grid-cols-3 gap-3">
+<div class="gold-card gold-border p-4 rounded-[1.6rem]"><div class="text-[#800000]/50 text-[8px]">PRINCIPAL</div><div id="mLoanPrincipal" class="gold-text font-black text-[14px] mt-1">UGX 0</div></div>
+<div class="bg-white gold-border p-4 rounded-[1.6rem] border-l-4 border-l-red-500"><div class="text-red-500/70 text-[8px]">OUTSTANDING</div><div id="mLoanOutstanding" class="text-red-600 font-black text-[14px] mt-1">UGX 0</div></div>
+<div class="gold-gradient p-4 rounded-[1.6rem]"><div class="text-white/70 text-[8px]">TOTAL DUE</div><div id="mLoanTotalDue" class="text-white font-black text-[14px] mt-1">UGX 0</div></div>
+</div>
+<div class="gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px] mb-3">LOAN HISTORY</h3><div id="mLoanHistoryTable" class="text-[10px] space-y-2"></div></div>
+<div class="gold-card gold-border rounded-[1.8rem] p-5 border-2 border-[#B94A48]/30"><h3 class="gold-text font-black text-[11px] mb-4">APPLY FOR NEW LOAN</h3><input id="loanAmount" type="number" placeholder="Amount e.g. 500000" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl text-[#4A0000] text-xs font-bold mb-3"><select id="loanGuarantor" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl text-[#4A0000] text-xs font-bold mb-3"><option value="">-- Select Guarantor --</option></select><button onclick="doApplyLoan()" class="w-full gold-btn p-4 rounded-2xl">SUBMIT TO GUARANTOR</button><div id="loanApplyMsg" class="text-center mt-3 font-black gold-text text-[10px]"></div></div>
+<div class="gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px] mb-3">MY APPLICATIONS</h3><div id="myApplicationsList" class="space-y-2 text-[10px]"></div></div>
+</div>
+
+<!-- ADMIN HOME -->
+<div id="admin-home" class="admin-page hidden space-y-4">
+<div class="gold-gradient p-5 rounded-[1.6rem] text-white"><h3 class="font-black text-[14px]">ADMIN DASHBOARD</h3><div id="admActiveMonth" class="text-white/80 text-[10px] mt-1">Active Month: -</div></div>
+<div class="gold-gradient p-5 rounded-[1.6rem] text-white"><div class="text-white/70 text-[9px] font-bold tracking-widest">CASH AT HAND</div><div id="admCashAtHand" class="font-black text-[26px] mt-1">UGX 0</div><div class="text-white/70 text-[8px] mt-1">Savings - Outstanding</div></div>
+<div class="grid grid-cols-2 gap-3">
+<div class="gold-card gold-border p-4 rounded-[1.6rem]"><div class="text-[#800000]/50 text-[8px]">TOTAL SAVINGS</div><div id="admTotalSavings" class="gold-text font-black text-[16px] mt-1">UGX 0</div></div>
+<div class="bg-white gold-border p-4 rounded-[1.6rem]"><div class="text-[#800000]/40 text-[8px]">TOTAL LOANS GIVEN</div><div id="admTotalLoans" class="text-[#4A0000] font-black text-[16px] mt-1">UGX 0</div></div>
+<div class="bg-white gold-border p-4 rounded-[1.6rem] border-l-4 border-l-red-500"><div class="text-red-500/70 text-[8px]">OUTSTANDING</div><div id="admOutstanding" class="text-red-600 font-black text-[16px] mt-1">UGX 0</div></div>
+<div class="gold-card gold-border p-4 rounded-[1.6rem]"><div class="text-[#800000]/50 text-[8px]">PENDING</div><div id="admPending" class="gold-text font-black text-[20px] mt-1">0</div></div>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div class="bg-white gold-border p-4 rounded-[1.6rem] border-l-4 border-l-[#B94A48]"><div class="text-[#800000]/70 text-[8px]">EARNINGS FROM PENALTY</div><div id="admPenaltyEarnings" class="gold-text font-black text-[16px] mt-1">UGX 0</div></div>
+<div class="bg-white gold-border p-4 rounded-[1.6rem] border-l-4 border-l-green-500"><div class="text-green-600/70 text-[8px]">EARNINGS FROM LOANS</div><div id="admLoanEarnings" class="text-green-600 font-black text-[16px] mt-1">UGX 0</div></div>
+</div>
+<div class="gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px]">ALL MEMBERS</h3><div id="admHomeHistoryList" class="mt-3 space-y-2"></div></div>
+</div>
+
+<!-- ADMIN SAVINGS -->
+<div id="admin-savings" class="admin-page hidden space-y-4">
+<div class="gold-gradient p-5 rounded-[1.6rem] text-white"><h3 class="font-black text-[14px]">SAVINGS OVERVIEW</h3><div id="savActiveMonthLabel" class="text-white/80 text-[10px] mt-1">Active Month: -</div></div>
+<div class="gold-card gold-border p-5 rounded-[1.6rem]"><h3 class="gold-text font-black text-[11px] mb-4">ADD SAVING</h3>
+<select id="adminMemberSelect" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl font-bold text-[#4A0000] text-sm mb-3"><option value="">-- Select Member --</option></select>
+<select id="aMonth" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl font-bold text-[#4A0000] text-sm mb-3"><option value="">-- Select Month --</option><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select>
+<input id="aShares" type="number" placeholder="Shares" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl mb-3 text-sm">
+<input id="aDate" type="date" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl mb-3 text-sm">
+<input id="aAmount" type="number" placeholder="Amount" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl mb-3 text-sm">
+<button onclick="addSavingEntry()" class="w-full gold-btn p-4 rounded-2xl">SAVE</button><div id="saveMsg" class="text-center mt-2 text-[10px] font-bold"></div>
+</div>
+<div class="gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px] mb-3">ALL SAVINGS</h3><div id="allSavingsList" class="space-y-2 text-[10px]"></div></div>
+</div>
+
+<!-- ADMIN LOANS -->
+<div id="admin-loans" class="admin-page hidden space-y-4">
+<div class="gold-card gold-border p-5 rounded-[1.6rem]"><h3 class="gold-text font-black text-[11px] mb-4">GIVE LOAN / APPROVE</h3>
+<select id="loanMemberSelect" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl mb-3 text-sm"><option value="">-- Select Member --</option></select>
+<input id="givePrincipal" type="number" placeholder="Principal" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl mb-3 text-sm">
+<input id="giveInterest" type="number" placeholder="Interest" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl mb-3 text-sm">
+<input id="giveDueDate" type="date" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl mb-3 text-sm">
+<input id="giveGuarantor" placeholder="Guarantor" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl mb-3 text-sm">
+<button onclick="giveLoan()" class="w-full gold-btn p-4 rounded-2xl">GIVE LOAN</button><div id="giveLoanMsg" class="text-center mt-2 text-[10px] font-bold"></div>
+</div>
+<div class="gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px] mb-3">PENDING APPLICATIONS</h3><div id="pendingList" class="space-y-2 text-[10px]"></div></div>
+<div class="gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px] mb-3">ALL LOANS</h3><div id="allLoansList" class="space-y-2 text-[10px]"></div></div>
+<div class="gold-card gold-border p-5 rounded-[1.6rem]"><h3 class="gold-text font-black text-[11px] mb-4">RECORD PAYMENT</h3>
+<select id="payMemberSelect" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl mb-3 text-sm"><option value="">-- Select Member --</option></select>
+<input id="payAmount" type="number" placeholder="Payment Amount" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl mb-3 text-sm">
+<input id="payDate" type="date" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl mb-3 text-sm">
+<button onclick="recordPayment()" class="w-full gold-btn p-4 rounded-2xl">RECORD PAYMENT</button><div id="payMsg" class="text-center mt-2 text-[10px] font-bold"></div>
+</div>
+</div>
+
+<!-- ADMIN LOGS -->
+<div id="admin-logs" class="admin-page hidden space-y-4">
+<div class="gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px] mb-3">LOGIN LOGS</h3><div id="loginLogsList" class="space-y-2 text-[10px]"></div></div>
+</div>
+
 </div>
 
 <script>
+// ===== SUPABASE - ONE FILE VERSION =====
 const SUPABASE_URL = "https://mpndeajnoxrmvpxtbrlo.supabase.co";
 const SUPABASE_KEY = "sb_publishable_DHyal88n3SWkgeOn29k2tQ__AhyXEoD";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const PENALTY_PER_MONTH = 3000;
+const MONTH_NUM = {"January":0,"February":1,"March":2,"April":3,"May":4,"June":5,"July":6,"August":7,"September":8,"October":9,"November":10,"December":11};
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 let currentUser = null;
+let allMembersList = [];
 
-async function login(){
+function fmt(n){ return "UGX " + Number(n||0).toLocaleString(); }
+function showLoading(on){ document.getElementById('globalLoading').classList.toggle('hidden', !on); }
+function calculatePenalty(monthName, datePaid){
+  if(!monthName || !datePaid) return 0;
+  let d = new Date(datePaid); if(isNaN(d)) return 0;
+  let mNum = MONTH_NUM[monthName]; if(mNum==null) return 0;
+  let dueYear = d.getFullYear(), dueMonth = mNum+1;
+  if(dueMonth>11){ dueMonth=0; dueYear++; }
+  let due = new Date(dueYear, dueMonth, 10); due.setHours(0,0,0,0); d.setHours(0,0,0,0);
+  if(d <= due) return 0;
+  let monthsLate = (d.getFullYear()-due.getFullYear())*12 + (d.getMonth()-due.getMonth()) + 1;
+  if(monthsLate<1) monthsLate=1;
+  return monthsLate * PENALTY_PER_MONTH;
+}
+
+async function doLogin(){
   const u = document.getElementById('username').value.trim();
   const p = document.getElementById('password').value.trim();
-  document.getElementById('loginMsg').innerText = "Checking...";
-  const { data, error } = await supabase.from('members').select('*').eq('username', u).eq('password', p).single();
-  if(error || !data){ document.getElementById('loginMsg').innerText = "Wrong username or password"; return; }
+  if(!u || !p){ document.getElementById('loginMsg').innerText="Enter username and password"; return; }
+  showLoading(true);
+  const { data, error } = await supabaseClient.from('members').select('*').eq('username', u).eq('password', p).single();
+  showLoading(false);
+  if(error || !data){ document.getElementById('loginMsg').innerText="Wrong username or password"; return; }
   currentUser = data;
   localStorage.setItem('lugore_user', JSON.stringify(data));
-  showApp();
-  await supabase.from('login_logs').insert({username: u, role: data.role});
+  await supabaseClient.from('login_logs').insert({username: data.name, role: data.role});
+  openApp();
 }
+function logoutUser(){ localStorage.removeItem('lugore_user'); location.reload(); }
 
-function showApp(){
+async function openApp(){
   document.getElementById('loginPage').classList.add('hidden');
   document.getElementById('appPage').classList.remove('hidden');
-  document.getElementById('welcome').innerText = "Welcome, " + currentUser.name;
-  document.getElementById('userInfo').innerText = currentUser.role + " | " + currentUser.username;
-  if(currentUser.role === 'admin'){
-    document.getElementById('adminBox').classList.remove('hidden');
-    loadAllMembers();
+  document.getElementById('welcomeUser').innerText = currentUser.name;
+  document.getElementById('roleBadge').innerText = (currentUser.role||'member').toUpperCase() + " | " + currentUser.username;
+  const { data: mems } = await supabaseClient.from('members').select('*').order('name');
+  allMembersList = mems || [];
+  // fill selects
+  let opts = '<option value="">-- Select Member --</option>' + allMembersList.filter(m=>m.role!=='admin').map(m=>`<option value="${m.name}">${m.name}</option>`).join('');
+  ['adminMemberSelect','loanMemberSelect','payMemberSelect'].forEach(id=>{ let el=document.getElementById(id); if(el) el.innerHTML=opts; });
+  document.getElementById('loanGuarantor').innerHTML = '<option value="">-- Select Guarantor --</option>' + allMembersList.filter(m=>m.role!=='admin' && m.name!==currentUser.name).map(m=>`<option value="${m.name}">${m.name}</option>`).join('');
+  document.getElementById('aDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('payDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('giveDueDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('admActiveMonth').innerText = "Active Month: " + MONTH_NAMES[new Date().getMonth()];
+  document.getElementById('savActiveMonthLabel').innerText = "Active Month: " + MONTH_NAMES[new Date().getMonth()];
+  if(currentUser.role==='admin'){
+    document.getElementById('adminTabs').classList.remove('hidden');
+    document.getElementById('adminTabs').classList.add('flex');
+    showAdminTab('home');
+  } else {
+    document.getElementById('memberTabs').classList.remove('hidden');
+    document.getElementById('memberTabs').classList.add('flex');
+    showMemberTab('home');
   }
-  loadMyData();
 }
 
-async function loadMyData(){
-  const { data: sav } = await supabase.from('savings').select('*').eq('member', currentUser.name);
-  let total = 0; let html = "<table><tr><th>Month</th><th>Amount</th></tr>";
-  (sav||[]).forEach(s=>{ total += Number(s.amount||0); html += `<tr><td>${s.month||''}</td><td>${s.amount}</td></tr>`; });
-  html += `</table><b>Total Savings: ${total}</b>`;
-  document.getElementById('mySavings').innerHTML = html;
-
-  const { data: loans } = await supabase.from('loans').select('*').eq('member', currentUser.name);
-  let html2 = "<table><tr><th>Principal</th><th>Total Due</th><th>Paid</th><th>Status</th></tr>";
-  (loans||[]).forEach(l=>{ html2 += `<tr><td>${l.principal}</td><td>${l.total_due}</td><td>${l.paid}</td><td>${l.status}</td></tr>`; });
-  html2 += "</table>";
-  document.getElementById('myLoans').innerHTML = html2;
+function showMemberTab(tab){
+  ['home','savings','loans'].forEach(t=> document.getElementById('member-'+t).classList.add('hidden'));
+  document.getElementById('member-'+tab).classList.remove('hidden');
+  loadMemberData();
+}
+function showAdminTab(tab){
+  ['home','savings','loans','logs'].forEach(t=> document.getElementById('admin-'+t).classList.add('hidden'));
+  document.getElementById('admin-'+tab).classList.remove('hidden');
+  if(tab==='home') loadAdminDashboard();
+  if(tab==='savings') loadAdminSavings();
+  if(tab==='loans') loadAdminLoans();
+  if(tab==='logs') loadLoginLogs();
 }
 
-async function loadAllMembers(){
-  const { data } = await supabase.from('members').select('*').order('name');
-  let h = "<table><tr><th>Name</th><th>Username</th></tr>";
-  (data||[]).forEach(m=>{ h += `<tr><td>${m.name}</td><td>${m.username}</td></tr>`; });
-  h += "</table>";
-  document.getElementById('allMembers').innerHTML = h;
+async function loadMemberData(){
+  const { data: sav } = await supabaseClient.from('savings').select('*').eq('member', currentUser.name);
+  const { data: loans } = await supabaseClient.from('loans').select('*').eq('member', currentUser.name);
+  const { data: apps } = await supabaseClient.from('applications').select('*').eq('member', currentUser.name).order('created_at',{ascending:false});
+  const { data: reqs } = await supabaseClient.from('guarantor_requests').select('*').eq('guarantor', currentUser.name).eq('status','Pending');
+  let totalSav=0, totalPen=0, shares=0, monthsSet=new Set();
+  (sav||[]).forEach(s=>{ totalSav+=Number(s.amount||0); totalPen+=calculatePenalty(s.month, s.date); shares=s.shares||shares; if(s.month) monthsSet.add(s.month); });
+  let perf = Math.round((monthsSet.size/12)*100);
+  let totalPrin=0, totalDue=0, totalPaid=0, totalOut=0;
+  (loans||[]).forEach(l=>{ totalPrin+=Number(l.principal||0); totalDue+=Number(l.total_due||0); totalPaid+=Number(l.paid||0); totalOut+=Number(l.total_due||0)-Number(l.paid||0); });
+  // HOME
+  document.getElementById('mShares').innerText=shares;
+  document.getElementById('mTotalSaved').innerText=fmt(totalSav);
+  document.getElementById('mPerf').innerText=perf+"%";
+  document.getElementById('mHomeLoanPrincipal').innerText=fmt(totalPrin);
+  document.getElementById('mHomeLoanOutstanding').innerText=fmt(totalOut);
+  document.getElementById('mHomeLoanTotalDue').innerText=fmt(totalDue);
+  document.getElementById('mSavingsList').innerHTML=(sav||[]).map(s=>`<div class="flex justify-between bg-[#FFF5F5] p-2 rounded-lg"><span>${s.month||''} • ${s.date||''}</span><span><b>${fmt(s.amount)}</b> ${calculatePenalty(s.month,s.date)?'<span class="text-red-600">Penalty '+fmt(calculatePenalty(s.month,s.date))+'</span>':''}</span></div>`).join('')||'No savings yet';
+  document.getElementById('mSavingsTotal').innerText="Grand Total: "+fmt(totalSav)+" | Penalty: "+fmt(totalPen);
+  document.getElementById('mHomeLoansCards').innerHTML=(loans||[]).map(l=>`<div class="bg-[#FFF5F5] p-3 rounded-xl"><b>${fmt(l.principal)}</b> • Due ${fmt(l.total_due)} • Paid ${fmt(l.paid)} • Outstanding ${fmt(Number(l.total_due)-Number(l.paid))} • ${l.status||'Active'} • Guarantor: ${l.guarantor||''}</div>`).join('')||'No loans';
+  // SAVINGS TAB
+  document.getElementById('mTotalSavingsTab').innerText=fmt(totalSav);
+  document.getElementById('mSavingsSubTab').innerText=`Shares: ${shares} | Performance: ${perf}% | Penalty: ${fmt(totalPen)}`;
+  document.getElementById('mSavingsList2').innerHTML=document.getElementById('mSavingsList').innerHTML;
+  // LOANS TAB
+  document.getElementById('mLoanPrincipal').innerText=fmt(totalPrin);
+  document.getElementById('mLoanOutstanding').innerText=fmt(totalOut);
+  document.getElementById('mLoanTotalDue').innerText=fmt(totalDue);
+  document.getElementById('mLoanHistoryTable').innerHTML=(loans||[]).map(l=>`<div class="bg-[#FFF5F5] p-2 rounded-lg">Principal ${fmt(l.principal)} | Interest ${fmt(l.interest)} | TotalDue ${fmt(l.total_due)} | Due ${l.due_date||''} | Paid ${fmt(l.paid)} | Outstanding ${fmt(Number(l.total_due)-Number(l.paid))} | ${l.status} | Guarantor ${l.guarantor||''}</div>`).join('')||'No loans';
+  document.getElementById('myApplicationsList').innerHTML=(apps||[]).map(a=>`<div class="bg-[#FFF5F5] p-2 rounded-lg">${fmt(a.amount)} • Guarantor: ${a.guarantor} • Status: ${a.status}</div>`).join('')||'No applications';
+  // Guarantor requests
+  if(reqs && reqs.length){
+    document.getElementById('guarantorRequestsBox').classList.remove('hidden');
+    document.getElementById('guarantorRequestsList').innerHTML=reqs.map(r=>`<div class="bg-[#FFF5F5] p-3 rounded-xl"><b>${r.applicant}</b> wants ${fmt(r.amount)}<div class="flex gap-2 mt-2"><button onclick="respondGuarantor('${r.id}','Accepted')" class="gold-btn px-4 py-2 rounded-full">ACCEPT</button><button onclick="respondGuarantor('${r.id}','Rejected')" class="bg-red-100 text-red-600 px-4 py-2 rounded-full font-black">REJECT</button></div></div>`).join('');
+  } else document.getElementById('guarantorRequestsBox').classList.add('hidden');
 }
 
-async function addSaving(){
-  const m = document.getElementById('s_member').value.trim();
-  const a = Number(document.getElementById('s_amount').value);
-  const mo = document.getElementById('s_month').value.trim();
-  if(!m || !a){ alert("Fill member and amount"); return; }
-  const { error } = await supabase.from('savings').insert({member: m, amount: a, month: mo, created_by: currentUser.name});
-  if(error) alert(error.message); else { alert("Saved!"); loadMyData(); }
+async function respondGuarantor(id, status){
+  await supabaseClient.from('guarantor_requests').update({status}).eq('id', id);
+  // also update application if exists - keep simple, just reload
+  alert(status); loadMemberData();
 }
 
-function logout(){ localStorage.removeItem('lugore_user'); location.reload(); }
+async function doApplyLoan(){
+  const amt = Number(document.getElementById('loanAmount').value);
+  const g = document.getElementById('loanGuarantor').value;
+  if(!amt || !g){ document.getElementById('loanApplyMsg').innerText="Enter amount and guarantor"; return; }
+  if(g===currentUser.name){ document.getElementById('loanApplyMsg').innerText="You cannot be your own guarantor"; return; }
+  const { error } = await supabaseClient.from('applications').insert({member: currentUser.name, amount: amt, guarantor: g, status: 'Pending'});
+  if(error){ document.getElementById('loanApplyMsg').innerText=error.message; return; }
+  await supabaseClient.from('guarantor_requests').insert({applicant: currentUser.name, guarantor: g, amount: amt, status: 'Pending'});
+  document.getElementById('loanApplyMsg').innerText="Sent to guarantor!";
+  loadMemberData();
+}
 
-const saved = localStorage.getItem('lugore_user');
-if(saved){ currentUser = JSON.parse(saved); showApp(); }
+async function loadAdminDashboard(){
+  const { data: sav } = await supabaseClient.from('savings').select('*');
+  const { data: loans } = await supabaseClient.from('loans').select('*');
+  const { data: apps } = await supabaseClient.from('applications').select('*').eq('status','Pending');
+  let totalSav=0, totalPen=0;
+  (sav||[]).forEach(s=>{ totalSav+=Number(s.amount||0); totalPen+=calculatePenalty(s.month, s.date); });
+  let totalLoans=0, totalOut=0, totalInterest=0;
+  (loans||[]).forEach(l=>{ totalLoans+=Number(l.principal||0); totalOut+=Number(l.total_due||0)-Number(l.paid||0); totalInterest+=Number(l.interest||0); });
+  document.getElementById('admTotalSavings').innerText=fmt(totalSav);
+  document.getElementById('admTotalLoans').innerText=fmt(totalLoans);
+  document.getElementById('admOutstanding').innerText=fmt(totalOut);
+  document.getElementById('admPending').innerText=(apps||[]).length;
+  document.getElementById('admPenaltyEarnings').innerText=fmt(totalPen);
+  document.getElementById('admLoanEarnings').innerText=fmt(totalInterest);
+  document.getElementById('admCashAtHand').innerText=fmt(totalSav-totalOut);
+  document.getElementById('admHomeHistoryList').innerHTML=allMembersList.filter(m=>m.role!=='admin').map(m=>`<div class="flex justify-between bg-[#FFF5F5] p-2 rounded-lg"><span>${m.name}</span><span>${m.username}</span></div>`).join('');
+}
+async function loadAdminSavings(){
+  const { data: sav } = await supabaseClient.from('savings').select('*').order('created_at',{ascending:false});
+  document.getElementById('allSavingsList').innerHTML=(sav||[]).map(s=>`<div class="flex justify-between bg-[#FFF5F5] p-2 rounded-lg"><span>${s.member} • ${s.month} • ${s.date||''}</span><span><b>${fmt(s.amount)}</b> ${calculatePenalty(s.month,s.date)?'<span class="text-red-600">Pen '+fmt(calculatePenalty(s.month,s.date))+'</span>':''}</span></div>`).join('')||'No savings';
+}
+async function loadAdminLoans(){
+  const { data: loans } = await supabaseClient.from('loans').select('*').order('created_at',{ascending:false});
+  const { data: apps } = await supabaseClient.from('applications').select('*').order('created_at',{ascending:false});
+  document.getElementById('allLoansList').innerHTML=(loans||[]).map(l=>`<div class="bg-[#FFF5F5] p-2 rounded-lg">${l.member} • Principal ${fmt(l.principal)} • Due ${fmt(l.total_due)} • Paid ${fmt(l.paid)} • ${l.status}</div>`).join('')||'No loans';
+  document.getElementById('pendingList').innerHTML=(apps||[]).filter(a=>a.status==='Pending').map(a=>`<div class="bg-[#FFF5F5] p-2 rounded-lg">${a.member} wants ${fmt(a.amount)} • Guarantor ${a.guarantor} • ${a.status}</div>`).join('')||'No pending';
+}
+async function loadLoginLogs(){
+  const { data } = await supabaseClient.from('login_logs').select('*').order('created_at',{ascending:false}).limit(20);
+  document.getElementById('loginLogsList').innerHTML=(data||[]).map(l=>`<div class="flex justify-between bg-[#FFF5F5] p-2 rounded-lg"><span>${l.username}</span><span>${l.role} • ${new Date(l.created_at).toLocaleString()}</span></div>`).join('')||'No logs';
+}
+async function addSavingEntry(){
+  const m = document.getElementById('adminMemberSelect').value;
+  const month = document.getElementById('aMonth').value;
+  const shares = Number(document.getElementById('aShares').value||0);
+  const date = document.getElementById('aDate').value;
+  const amt = Number(document.getElementById('aAmount').value);
+  if(!m || !month || !amt){ document.getElementById('saveMsg').innerText="Fill member, month and amount"; return; }
+  const pen = calculatePenalty(month, date);
+  const { error } = await supabaseClient.from('savings').insert({member:m, shares, month, date, amount:amt, penalty:pen, created_by: currentUser.name});
+  if(error) document.getElementById('saveMsg').innerText=error.message;
+  else { document.getElementById('saveMsg').innerText="Saved! Penalty: "+fmt(pen); loadAdminSavings(); }
+}
+async function giveLoan(){
+  const m = document.getElementById('loanMemberSelect').value;
+  const princ = Number(document.getElementById('givePrincipal').value);
+  const intr = Number(document.getElementById('giveInterest').value||0);
+  const due = document.getElementById('giveDueDate').value;
+  const g = document.getElementById('giveGuarantor').value;
+  if(!m || !princ){ document.getElementById('giveLoanMsg').innerText="Fill member and principal"; return; }
+  const total = princ + intr;
+  const { error } = await supabaseClient.from('loans').insert({member:m, principal:princ, interest:intr, total_due:total, paid:0, principal_paid:0, guarantor:g, status:'Active', due_date:due, given_by: currentUser.name});
+  if(error) document.getElementById('giveLoanMsg').innerText=error.message;
+  else { document.getElementById('giveLoanMsg').innerText="Loan given!"; loadAdminLoans(); }
+}
+async function recordPayment(){
+  const m = document.getElementById('payMemberSelect').value;
+  const amt = Number(document.getElementById('payAmount').value);
+  const date = document.getElementById('payDate').value;
+  if(!m || !amt){ document.getElementById('payMsg').innerText="Fill member and amount"; return; }
+  // find active loan
+  const { data: loans } = await supabaseClient.from('loans').select('*').eq('member', m).eq('status','Active').order('created_at',{ascending:true}).limit(1);
+  if(!loans || !loans.length){ document.getElementById('payMsg').innerText="No active loan for this member"; return; }
+  let loan = loans[0];
+  let newPaid = Number(loan.paid||0)+amt;
+  let newStatus = newPaid >= Number(loan.total_due||0) ? 'Cleared' : 'Active';
+  await supabaseClient.from('loans').update({paid:newPaid, status:newStatus}).eq('id', loan.id);
+  await supabaseClient.from('payments').insert({member:m, amount:amt, date, month: MONTH_NAMES[new Date(date).getMonth()], recorded_by: currentUser.name});
+  document.getElementById('payMsg').innerText="Payment recorded! New paid: "+fmt(newPaid);
+  loadAdminLoans();
+}
+
+const savedUser = localStorage.getItem('lugore_user');
+if(savedUser){ currentUser = JSON.parse(savedUser); openApp(); }
 </script>
 </body>
 </html>
