@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html><body style="font-family:Arial;padding:20px">
+<h1>TEST CONNECTION</h1>
+<p id="status">Testing...</p>
+<button onclick="test()" style="padding:15px;background:red;color:white;border:0;border-radius:10px;font-size:18px">TAP TO TEST SUPABASE</button>
+<p id="result"></p>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const supabaseClient = supabase.createClient("https://mpndeajnoxrmvpxtbrlo.supabase.co","sb_publishable_DHyal88n3SWkgeOn29k2tQ__AhyXEoD");
+async function test(){
+  document.getElementById('result').innerText = 'Testing... wait...';
+  try{
+    const r = await supabaseClient.from('members').select('*');
+    if(r.error){ document.getElementById('result').innerText = '❌ ERROR: ' + r.error.message; alert('ERROR: '+r.error.message); }
+    else{ document.getElementById('result').innerText = '✅ SUCCESS! Found '+r.data.length+' members: ' + JSON.stringify(r.data); alert('SUCCESS! Found '+r.data.length+' members'); }
+  }catch(e){ document.getElementById('result').innerText = '❌ FAILED: '+e.message; alert('FAILED: '+e.message); }
+}
+test();
+</script>
+</body></html>
