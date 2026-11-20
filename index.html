@@ -1,182 +1,98 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LUGORE - Ride App</title>
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-*{box-sizing:border-box;font-family:Arial,sans-serif}
-body{margin:0;background:#0f172a;color:white;padding:16px}
-.header{text-align:center;margin-bottom:16px}
-.header h1{font-size:32px;margin:0;color:#facc15}
-.header p{color:#cbd5e1;margin:4px 0 0}
-.card{background:#1e293b;border-radius:16px;padding:16px;margin-bottom:14px}
-.tabs{display:flex;gap:8px;margin-bottom:14px}
-.tabs button{flex:1;padding:12px;border:0;border-radius:12px;font-weight:bold;cursor:pointer}
-.tabs button.active{background:#facc15;color:black}
-.tabs button.inactive{background:#334155;color:white}
-label{font-size:13px;color:#cbd5e1}
-input,select{width:100%;padding:12px;border-radius:10px;border:0;margin:6px 0 12px;background:#0f172a;color:white;outline:1px solid #334155}
-.btn{width:100%;padding:14px;border:0;border-radius:12px;background:#facc15;color:black;font-weight:bold;font-size:16px;cursor:pointer}
-.btn-green{background:#22c55e;color:white}
-.btn-red{background:#ef4444;color:white}
-.ride{background:#0f172a;border:1px solid #334155;border-radius:12px;padding:12px;margin-bottom:10px}
-.ride b{color:#facc15}
-.small{font-size:12px;color:#94a3b8}
-.status{padding:4px 10px;border-radius:20px;font-size:12px;font-weight:bold;display:inline-block}
-.pending{background:#facc15;color:black}
-.accepted{background:#22c55e;color:white}
-.completed{background:#334155;color:white}
-.hidden{display:none}
+body{background:#FBE9E9; font-family:Inter,sans-serif; color:#4A0000;}
+.gold-gradient{background: linear-gradient(135deg,#B94A48,#D67A7A);}
+.gold-text{background: linear-gradient(135deg,#800000,#B94A48); -webkit-background-clip:text; -webkit-text-fill-color:transparent;}
+.gold-border{border:1px solid rgba(185,74,72,0.25);}
+.gold-card{background:#FFFFFF; box-shadow:0 4px 20px rgba(128,0,0,0.08);}
+.gold-btn{background: linear-gradient(135deg,#A52A2A,#C25A5A); color:#fff; font-weight:900; box-shadow:0 6px 20px rgba(165,42,42,0.25);}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+.spin{animation:spin 0.8s linear infinite}
 </style>
 </head>
-<body>
+<body class="p-2 text-xs">
+<div id="globalLoading" class="hidden fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center backdrop-blur-sm">
+<div class="bg-white gold-border p-8 rounded-[2rem] text-center min-w-[180px]"><div class="w-14 h-14 border-4 border-[#B94A48]/20 border-t-[#800000] rounded-full spin mx-auto"></div><div id="loadingText" class="gold-text font-black text-[12px] mt-4 tracking-widest">LOADING...</div></div></div>
 
-<div class="header">
-  <h1>🛵 LUGORE</h1>
-  <p>Fast Boda & Ride in Kampala</p>
-  <p class="small" id="conn">Connecting...</p>
+<!-- LOGIN -->
+<div id="loginPage" class="min-h-screen flex items-center justify-center">
+<div class="bg-white gold-border p-8 rounded-[2rem] w-full max-w-sm shadow-xl">
+<div class="text-center mb-8"><div class="w-24 h-24 rounded-[1.7rem] mx-auto flex items-center justify-center gold-gradient text-white text-4xl font-black">L</div><h1 class="gold-text font-black text-xl tracking-widest mt-4">LUGORE STAFF<br>SAVINGS GROUP</h1><p class="text-[10px] text-[#800000]/60 mt-1" id="connMsg">Connecting to Supabase...</p></div>
+<input id="username" placeholder="Username" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl mb-3 text-[#4A0000] text-[13px]">
+<input id="password" type="password" placeholder="Password" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl mb-5 text-[#4A0000] text-[13px]">
+<button id="loginBtn" onclick="doLogin()" class="w-full gold-btn p-4 rounded-2xl text-[13px]">LOGIN</button>
+<div id="loginMsg" class="text-red-500 text-center mt-4 text-[10px]"></div>
+<p class="text-center text-[10px] mt-3 text-[#800000]/60">First login: Admin / admin123<br>Then add members in Admin > Savings</p>
+</div></div>
+
+<!-- APP -->
+<div id="appPage" class="hidden">
+<div class="flex justify-between items-center bg-white gold-border p-4 rounded-[1.5rem] mb-3 shadow-sm"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-full gold-gradient text-white flex items-center justify-center font-black">L</div><div><div id="welcomeUser" class="font-black text-[#4A0000] text-sm"></div><div id="roleBadge" class="gold-text text-[9px] font-bold"></div></div></div><div class="flex gap-2"><button onclick="openChangePassword()" class="bg-[#FBE9E9] text-[#800000] border border-[#B94A48]/30 w-9 h-9 rounded-full font-black text-[14px]">🔑</button><button onclick="logoutUser()" class="bg-red-50 text-red-600 border border-red-200 px-5 py-2 rounded-full font-black text-[10px]">LOGOUT</button></div></div>
+
+<div id="memberTabs" class="hidden flex gap-2 mb-4 overflow-x-auto">
+<button id="m-tab-home" onclick="showMemberTab('home')" class="m-tab gold-btn px-6 py-3 rounded-full font-black text-[11px]">HOME</button>
+<button id="m-tab-savings" onclick="showMemberTab('savings')" class="m-tab bg-white text-[#800000]/60 gold-border px-6 py-3 rounded-full font-black text-[11px]">SAVINGS</button>
+<button id="m-tab-loans" onclick="showMemberTab('loans')" class="m-tab bg-white text-[#800000]/60 gold-border px-6 py-3 rounded-full font-black text-[11px]">LOANS</button>
+</div>
+<div id="adminTabs" class="hidden flex gap-2 mb-4 overflow-x-auto">
+<button id="a-tab-home" onclick="showAdminTab('home')" class="a-tab gold-btn px-5 py-3 rounded-full font-black text-[10px]">HOME</button>
+<button id="a-tab-savings" onclick="showAdminTab('savings')" class="a-tab bg-white text-[#800000]/60 gold-border px-5 py-3 rounded-full font-black text-[10px]">SAVINGS</button>
+<button id="a-tab-loans" onclick="showAdminTab('loans')" class="a-tab bg-white text-[#800000]/60 gold-border px-5 py-3 rounded-full font-black text-[10px]">LOANS</button>
+<button id="a-tab-logs" onclick="showAdminTab('logs')" class="a-tab bg-white text-[#800000]/60 gold-border px-5 py-3 rounded-full font-black text-[10px]">LOGIN LOGS</button>
 </div>
 
-<div class="tabs">
-  <button id="tabRider" class="active" onclick="showTab('rider')">🧑 RIDER - Book Ride</button>
-  <button id="tabDriver" class="inactive" onclick="showTab('driver')">🏍️ DRIVER</button>
+<!-- MEMBER HOME -->
+<div id="member-home" class="member-page space-y-4 hidden">
+<div class="gold-gradient p-3 rounded-[1.2rem] text-white"><h3 class="font-black text-[11px]">MY SAVINGS</h3></div>
+<div class="grid grid-cols-3 gap-3"><div class="gold-card gold-border p-4 rounded-[1.6rem]"><div class="text-[#800000]/50 text-[8px]">SHARES</div><div id="mShares" class="gold-text font-black text-[20px] mt-1">0</div></div><div class="bg-white gold-border p-4 rounded-[1.6rem]"><div class="text-[#800000]/40 text-[8px]">TOTAL SAVINGS</div><div id="mTotalSaved" class="text-[#4A0000] font-black text-[11px] mt-1">UGX 0</div></div><div class="gold-gradient p-4 rounded-[1.6rem]"><div class="text-white/70 text-[8px]">PERFORMANCE</div><div id="mPerf" class="text-white font-black text-[11px] mt-1">0%</div></div></div>
+<div class="gold-gradient p-3 rounded-[1.2rem] text-white mt-2"><h3 class="font-black text-[11px]">MY LOANS</h3></div>
+<div class="grid grid-cols-3 gap-3"><div class="gold-card gold-border p-4 rounded-[1.6rem]"><div class="text-[#800000]/50 text-[8px]">PRINCIPAL</div><div id="mHomeLoanPrincipal" class="gold-text font-black text-[13px] mt-1">UGX 0</div></div><div class="bg-white gold-border p-4 rounded-[1.6rem] border-l-4 border-l-red-500"><div class="text-red-500/70 text-[8px]">OUTSTANDING</div><div id="mHomeLoanOutstanding" class="text-red-600 font-black text-[13px] mt-1">UGX 0</div></div><div class="bg-white gold-border p-4 rounded-[1.6rem]"><div class="text-[#800000]/40 text-[8px]">TOTAL DUE</div><div id="mHomeLoanTotalDue" class="text-[#4A0000] font-black text-[12px] mt-1">UGX 0</div></div></div>
+<div class="gold-card gold-border rounded-[1.6rem] p-4"><div class="flex justify-between mb-3"><h3 class="gold-text font-black text-[11px]">MY SAVINGS</h3><span id="mSharesFixed" class="gold-gradient text-white text-[9px] px-3 py-1 rounded-full font-black">SHARES: 0</span></div><div class="overflow-x-auto rounded-2xl border border-[#B94A48]/20 bg-[#FFF5F5]"><table class="w-full text-[10px]"><thead><tr class="bg-[#FBE9E9] text-[#800000]"><th class="p-3 text-left">Month</th><th class="p-3 text-left">Date</th><th class="p-3 text-left">Amount</th><th class="p-3 text-left">Total</th><th class="p-3 text-left">Penalty</th></tr></thead><tbody id="mSavingsList" class="text-[#4A0000]"></tbody></table></div><div id="mSavingsTotal" class="gold-gradient text-white font-black mt-3 p-3 rounded-xl text-center text-[10px]"></div></div>
+<div class="gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px] mb-3">MY LOANS</h3><div id="mHomeLoansCards" class="space-y-3"></div></div>
+<div class="gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px] mb-3">PREVIOUS HISTORY</h3><div id="mRecentHistory" class="text-[10px] space-y-2 text-[#4A0000]/70"></div></div>
 </div>
 
-<!-- RIDER -->
-<div id="riderView">
-  <div class="card">
-    <h3 style="margin:0 0 10px">Book a Ride</h3>
-    <label>Your Name</label>
-    <input id="riderName" placeholder="e.g. Brian Gona">
-    <label>Phone</label>
-    <input id="riderPhone" placeholder="e.g. 0700 123456">
-    <label>Pickup Location</label>
-    <input id="pickup" placeholder="e.g. Kampala Road, Nakasero">
-    <label>Dropoff Location</label>
-    <input id="dropoff" placeholder="e.g. Ntinda, Kigowa">
-    <button class="btn" onclick="bookRide()">Request Ride 🚀</button>
-    <p id="bookMsg" class="small"></p>
-  </div>
-
-  <div class="card">
-    <h3 style="margin:0 0 10px">My Rides / Live Rides</h3>
-    <button class="btn" style="background:#334155;color:white" onclick="loadRides()">Refresh Rides 🔄</button>
-    <div id="ridesList" style="margin-top:12px"></div>
-  </div>
+<!-- MEMBER SAVINGS -->
+<div id="member-savings" class="member-page hidden space-y-4">
+<div class="gold-gradient p-5 rounded-[1.6rem] text-white text-center"><div class="text-white/70 text-[9px] font-bold tracking-widest">TOTAL SAVINGS</div><div id="mTotalSavingsTab" class="font-black text-[26px] mt-1">UGX 0</div><div id="mSavingsSubTab" class="text-white/80 text-[9px] mt-1 font-bold">Shares: 0 | Performance: 0%</div></div>
+<div class="grid grid-cols-3 gap-3"><div class="gold-card gold-border p-4 rounded-[1.6rem] text-center"><div class="text-[#800000]/50 text-[8px]">SHARES</div><div id="mShares2" class="gold-text font-black text-[20px] mt-1">0</div></div><div class="bg-white gold-border p-4 rounded-[1.6rem] text-center border-l-4 border-l-[#B94A48]"><div class="text-[#800000]/50 text-[8px]">PERFORMANCE</div><div id="mPerf2" class="gold-text font-black text-[18px] mt-1">0%</div><div id="mMonthsPaid2" class="text-[#800000]/40 text-[7px] mt-1">0/12</div></div><div class="bg-white gold-border p-4 rounded-[1.6rem] text-center border-l-4 border-l-red-500"><div class="text-[#800000]/40 text-[8px]">PENALTY</div><div id="mPenalty2" class="text-red-600 font-black text-[13px] mt-1">UGX 0</div></div></div>
+<div class="gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px] mb-1">SAVINGS</h3><div class="overflow-x-auto rounded-2xl border border-[#B94A48]/20 bg-[#FFF5F5]"><table class="w-full text-[8px]"><thead><tr class="bg-[#FBE9E9] text-[#800000]"><th class="p-2 text-left">Name</th><th class="p-2 text-left">Shares</th><th class="p-2 text-left">Month</th><th class="p-2 text-left">Date</th><th class="p-2 text-left">Amount</th><th class="p-2 text-left">Total</th><th class="p-2 text-left">Penalty</th></tr></thead><tbody id="mSavingsList2" class="text-[#4A0000]"></tbody></table></div><div id="mSavingsTotal2" class="gold-gradient text-white font-black mt-3 p-3 rounded-xl text-center text-[10px]">Grand Total: UGX 0</div></div>
 </div>
 
-<!-- DRIVER -->
-<div id="driverView" class="hidden">
-  <div class="card">
-    <h3 style="margin:0 0 10px">Driver Registration</h3>
-    <label>Driver Name</label>
-    <input id="driverName" placeholder="e.g. John Kato">
-    <label>Phone</label>
-    <input id="driverPhone" placeholder="e.g. 0770 123456">
-    <label>Vehicle</label>
-    <input id="vehicle" placeholder="e.g. Bajaj Boxer - Boda">
-    <label>Plate Number</label>
-    <input id="plate" placeholder="e.g. UFG 123A">
-    <button class="btn btn-green" onclick="registerDriver()">Register as Driver ✅</button>
-    <p id="driverMsg" class="small"></p>
-  </div>
-
-  <div class="card">
-    <h3 style="margin:0 0 10px">Available Rides - Pending</h3>
-    <button class="btn" style="background:#334155;color:white" onclick="loadRides()">Refresh 🔄</button>
-    <div id="driverRidesList" style="margin-top:12px"></div>
-  </div>
+<!-- MEMBER LOANS -->
+<div id="member-loans" class="member-page hidden space-y-4">
+<div id="guarantorRequestsBox" class="hidden gold-card gold-border rounded-[1.6rem] p-4 border-2 border-[#B94A48]/40"><h3 class="gold-text font-black text-[12px] mb-3">GUARANTOR REQUESTS - I MUST ACCEPT / REJECT</h3><div id="guarantorRequestsList" class="space-y-3"></div></div>
+<div class="grid grid-cols-3 gap-3"><div class="gold-card gold-border p-4 rounded-[1.6rem]"><div class="text-[#800000]/50 text-[8px]">PRINCIPAL</div><div id="mLoanPrincipal" class="gold-text font-black text-[14px] mt-1">UGX 0</div></div><div class="bg-white gold-border p-4 rounded-[1.6rem] border-l-4 border-l-red-500"><div class="text-red-500/70 text-[8px]">OUTSTANDING</div><div id="mLoanOutstanding" class="text-red-600 font-black text-[14px] mt-1">UGX 0</div></div><div class="gold-gradient p-4 rounded-[1.6rem]"><div class="text-white/70 text-[8px]">TOTAL DUE</div><div id="mLoanTotalDue" class="text-white font-black text-[14px] mt-1">UGX 0</div></div></div>
+<div class="gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px] mb-1">LOANS</h3><div class="overflow-x-auto rounded-2xl border border-[#B94A48]/20 bg-[#FFF5F5]"><table class="w-full text-[8px]"><thead><tr class="bg-[#FBE9E9] text-[#800000]"><th class="p-2 text-left">Principal</th><th class="p-2 text-left">DateGiven</th><th class="p-2 text-left">Interest</th><th class="p-2 text-left">TotalDue</th><th class="p-2 text-left">DueDate</th><th class="p-2 text-left">Paid</th><th class="p-2 text-left">Outstanding</th><th class="p-2 text-left">Status</th><th class="p-2 text-left">Guarantor</th></tr></thead><tbody id="mLoanHistoryTable" class="text-[#4A0000]"></tbody></table></div><div id="mLoanHistorySummary" class="gold-gradient text-white font-black mt-3 p-3 rounded-xl text-center text-[9px]">Total Principal: UGX 0</div></div>
+<div class="gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px] mb-3">TRANSACTIONS</h3><div class="overflow-x-auto rounded-2xl border border-[#B94A48]/20 bg-[#FFF5F5]"><table class="w-full text-[8px]"><thead><tr class="bg-[#FBE9E9] text-[#800000]"><th class="p-2 text-left">OldPrincipal</th><th class="p-2 text-left">OldInterest</th><th class="p-2 text-left">PayAmount</th><th class="p-2 text-left">PayDate</th><th class="p-2 text-left">NewPrincipal</th><th class="p-2 text-left">NewTotal</th></tr></thead><tbody id="mPaymentHistoryTable" class="text-[#4A0000]"></tbody></table></div></div>
+<div id="mLoansCards" class="space-y-3"></div>
+<div class="gold-card gold-border rounded-[1.8rem] p-5 border-2 border-[#B94A48]/30"><h3 class="gold-text font-black text-[11px] mb-4">APPLY FOR NEW LOAN</h3><div class="grid grid-cols-2 gap-3 mb-3"><input id="loanAmount" type="number" placeholder="Amount e.g. 500000" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl text-[#4A0000] text-xs font-bold col-span-2"><input id="loanReason" placeholder="Reason e.g. School fees" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl text-[#4A0000] text-xs col-span-2"><select id="loanGuarantor" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl text-[#4A0000] text-xs font-bold col-span-2"><option value="">-- Select Guarantor --</option></select></div><button onclick="doApplyLoan()" class="w-full gold-btn p-4 rounded-2xl">SUBMIT TO GUARANTOR</button><div id="loanApplyMsg" class="text-center mt-3 font-black gold-text text-[10px]"></div></div>
+<div class="gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px] mb-3">MY APPLICATIONS</h3><div id="myApplicationsList" class="space-y-2"></div></div>
 </div>
 
-<script>
-const SUPABASE_URL = "https://mpndeajnoxrmvpxtbrlo.supabase.co";
-const SUPABASE_KEY = "sb_publishable_DHyal88n3SWkgeOn29k2tQ__AhyXEoD";
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+<!-- ADMIN HOME -->
+<div id="admin-home" class="admin-page hidden space-y-4">
+<div class="gold-gradient p-5 rounded-[1.6rem] text-white"><h3 class="font-black text-[14px]">ADMIN DASHBOARD</h3><div id="admActiveMonth" class="text-white/80 text-[10px] mt-1">Active Month: -</div></div>
+<div class="gold-gradient p-5 rounded-[1.6rem] text-white"><div class="text-white/70 text-[9px] font-bold tracking-widest">CASH AT HAND</div><div id="admCashAtHand" class="font-black text-[26px] mt-1">UGX 0</div><div class="text-white/70 text-[8px] mt-1">Savings - Outstanding</div></div>
+<div class="grid grid-cols-2 gap-3"><div class="gold-card gold-border p-4 rounded-[1.6rem]"><div class="text-[#800000]/50 text-[8px]">TOTAL SAVINGS</div><div id="admTotalSavings" class="gold-text font-black text-[16px] mt-1">UGX 0</div></div><div class="bg-white gold-border p-4 rounded-[1.6rem]"><div class="text-[#800000]/40 text-[8px]">TOTAL LOANS GIVEN</div><div id="admTotalLoans" class="text-[#4A0000] font-black text-[16px] mt-1">UGX 0</div></div><div class="bg-white gold-border p-4 rounded-[1.6rem] border-l-4 border-l-red-500"><div class="text-red-500/70 text-[8px]">OUTSTANDING BALANCE</div><div id="admOutstanding" class="text-red-600 font-black text-[16px] mt-1">UGX 0</div></div><div class="gold-card gold-border p-4 rounded-[1.6rem]"><div class="text-[#800000]/50 text-[8px]">PENDING</div><div id="admPending" class="gold-text font-black text-[20px] mt-1">0</div></div></div>
+<div class="grid grid-cols-2 gap-3"><div class="bg-white gold-border p-4 rounded-[1.6rem] border-l-4 border-l-[#B94A48]"><div class="text-[#800000]/70 text-[8px]">EARNINGS FROM PENALTY</div><div id="admPenaltyEarnings" class="gold-text font-black text-[16px] mt-1">UGX 0</div><button onclick="togglePenaltyBreakdown()" class="text-[#800000] text-[8px] font-black underline mt-1">SEE BREAKDOWN - HOW IT CAME</button></div><div class="bg-white gold-border p-4 rounded-[1.6rem] border-l-4 border-l-green-500"><div class="text-green-600/70 text-[8px]">EARNINGS FROM LOANS</div><div id="admLoanEarnings" class="text-green-600 font-black text-[16px] mt-1">UGX 0</div></div><div class="gold-gradient p-4 rounded-[1.6rem] col-span-2"><div class="text-white/70 text-[8px]">TOTAL EARNINGS</div><div id="admTotalEarnings" class="text-white font-black text-[18px] mt-1">UGX 0</div></div></div>
+<div id="penaltyBreakdownBox" class="hidden gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px] mb-1">PENALTY BREAKDOWN - CHECK WRONG DATES HERE</h3><div class="text-[9px] text-[#800000]/60 mb-2">Rule: Save for Jan -> Due 10th Feb. Pay after = 3000 x months late. If Date is wrong, Penalty is wrong.</div><div id="penaltyBreakdownList" class="space-y-2 max-h-[400px] overflow-y-auto"></div><div id="penaltyBreakdownTotal" class="gold-gradient text-white font-black mt-3 p-3 rounded-xl text-center text-[10px]"></div></div>
+<div class="gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px]">PENDING QUICK VIEW</h3><div id="admPendingQuick" class="mt-3 space-y-2"></div></div>
+<div class="gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px]">HISTORY - ALL MEMBERS</h3><div id="admHomeHistoryList" class="mt-3 space-y-2 max-h-[500px] overflow-y-auto"></div><div id="admHomeHistoryTotal" class="gold-gradient text-white font-black mt-3 p-3 rounded-xl text-center text-[10px]">Total: UGX 0</div></div>
+</div>
 
-let currentDriverId = localStorage.getItem('lugore_driver_id') || null;
+<!-- ADMIN SAVINGS -->
+<div id="admin-savings" class="admin-page hidden space-y-4">
+<div class="gold-gradient p-5 rounded-[1.6rem] text-white"><h3 class="font-black text-[14px]">SAVINGS OVERVIEW</h3><div id="savActiveMonthLabel" class="text-white/80 text-[10px] mt-1">Active Month: -</div></div>
+<div class="gold-card gold-border p-4 rounded-[1.6rem]"><div class="text-[#800000]/60 text-[9px] font-black mb-2">CHECK MONTH - SAVED / NOT SAVED IS FOR THIS MONTH ONLY</div><select id="savMonthFilter" onchange="loadSavingsOverview()" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl font-bold text-[#4A0000] text-sm"></select></div>
+<div class="grid grid-cols-3 gap-3"><div class="gold-card gold-border p-4 rounded-[1.6rem]"><div class="text-[#800000]/50 text-[8px]">TOTAL SAVINGS (ALL TIME)</div><div id="savTotal" class="gold-text font-black text-[16px] mt-1">UGX 0</div><div id="savMonthTotal" class="text-[#800000]/50 text-[8px] mt-1">This Month: UGX 0</div></div><div class="bg-white gold-border p-4 rounded-[1.6rem] border-l-4 border-l-green-500"><div class="text-green-600/70 text-[8px]">SAVED THIS MONTH</div><div id="savSaversCount" class="text-green-600 font-black text-[20px] mt-1">0</div></div><div class="bg-white gold-border p-4 rounded-[1.6rem] border-l-4 border-l-red-500"><div class="text-red-500/70 text-[8px]">NOT SAVED THIS MONTH</div><div id="savNonSaversCount" class="text-red-600 font-black text-[20px] mt-1">0</div></div></div>
+<div class="grid grid-cols-2 gap-3"><div class="gold-card gold-border rounded-[1.6rem] p-4"><h3 class="gold-text font-black text-[11px] mb-3">SAVED THIS MONTH (<span id="savListCount">0</span>)</h3><div id="savSaversList" class="space-y-2 max-h-[400px] overflow-y-auto"></div></div><div class="bg-white gold-border rounded-[1.6rem] p-4 border-l-4 border-l-red-500"><h3 class="text-red-600 font-black text-[11px] mb-3">NOT SAVED THIS MONTH (<span id="savNonListCount">0</span>)</h3><div id="savNonSaversList" class="space-y-2 max-h-[400px] overflow-y-auto"></div></div></div>
 
-function showTab(tab){
-  document.getElementById('riderView').classList.toggle('hidden', tab!=='rider');
-  document.getElementById('driverView').classList.toggle('hidden', tab!=='driver');
-  document.getElementById('tabRider').className = tab==='rider' ? 'active' : 'inactive';
-  document.getElementById('tabDriver').className = tab==='driver' ? 'active' : 'inactive';
-  loadRides();
-}
+<div class="gold-card gold-border p-5 rounded-[1.6rem]"><h3 class="gold-text font-black text-[11px] mb-4">ADD NEW MEMBER</h3><input id="newMemberName" placeholder="Full Name e.g. Sarah Nakato" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl mb-2 text-[#4A0000]"><input id="newMemberPass" placeholder="Password e.g. 1234" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl mb-2 text-[#4A0000]"><select id="newMemberRole" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl mb-2 text-[#4A0000]"><option value="member">member</option><option value="admin">admin</option></select><button onclick="addMember()" class="w-full gold-btn p-4 rounded-2xl">ADD MEMBER ➕</button><div id="memberMsg" class="text-center mt-2 font-black gold-text text-[10px]"></div></div>
 
-async function bookRide(){
-  const name = document.getElementById('riderName').value.trim();
-  const phone = document.getElementById('riderPhone').value.trim();
-  const pickup = document.getElementById('pickup').value.trim();
-  const dropoff = document.getElementById('dropoff').value.trim();
-  if(!name || !phone || !pickup || !dropoff){ alert('Please fill all fields'); return; }
-  document.getElementById('bookMsg').innerText = 'Sending...';
-  const { data, error } = await supabaseClient.from('rides').insert([{rider_name:name, rider_phone:phone, pickup:pickup, dropoff:dropoff, status:'pending'}]).select();
-  if(error){ document.getElementById('bookMsg').innerText = 'Error: '+error.message; }
-  else{
-    document.getElementById('bookMsg').innerText = '✅ Ride requested! Drivers will see it now.';
-    document.getElementById('pickup').value=''; document.getElementById('dropoff').value='';
-    loadRides();
-  }
-}
-
-async function registerDriver(){
-  const name = document.getElementById('driverName').value.trim();
-  const phone = document.getElementById('driverPhone').value.trim();
-  const vehicle = document.getElementById('vehicle').value.trim();
-  const plate = document.getElementById('plate').value.trim();
-  if(!name || !phone){ alert('Fill name and phone'); return; }
-  const { data, error } = await supabaseClient.from('drivers').insert([{full_name:name, phone:phone, vehicle:vehicle, plate_number:plate, is_online:true}]).select();
-  if(error){ document.getElementById('driverMsg').innerText = 'Error: '+error.message; }
-  else{
-    currentDriverId = data[0].id;
-    localStorage.setItem('lugore_driver_id', currentDriverId);
-    document.getElementById('driverMsg').innerText = '✅ Registered! You are now online. You can accept rides below.';
-    loadRides();
-  }
-}
-
-async function loadRides(){
-  const { data, error } = await supabaseClient.from('rides').select('*').order('created_at',{ascending:false}).limit(20);
-  if(error){ document.getElementById('conn').innerText = '❌ Not connected: '+error.message; return; }
-  document.getElementById('conn').innerText = '✅ Connected to Supabase - ' + data.length + ' rides';
-  renderRides(data, 'ridesList', false);
-  renderRides(data, 'driverRidesList', true);
-}
-
-function renderRides(rides, elementId, isDriver){
-  const el = document.getElementById(elementId);
-  if(!rides || rides.length===0){ el.innerHTML='<p class="small">No rides yet.</p>'; return; }
-  el.innerHTML = rides.map(r => `
-    <div class="ride">
-      <b>${r.pickup} → ${r.dropoff}</b><br>
-      <span class="small">Rider: ${r.rider_name} - ${r.rider_phone}</span><br>
-      <span class="status ${r.status}">${r.status.toUpperCase()}</span>
-      <span class="small"> • ${new Date(r.created_at).toLocaleString()}</span>
-      <div style="margin-top:10px;display:flex;gap:8px">
-        ${isDriver && r.status==='pending' ? `<button class="btn btn-green" style="padding:10px" onclick="acceptRide('${r.id}')">Accept Ride</button>` : ''}
-        ${r.status==='accepted' ? `<button class="btn" style="padding:10px;background:#334155;color:white" onclick="completeRide('${r.id}')">Mark Completed</button>` : ''}
-      </div>
-    </div>
-  `).join('');
-}
-
-async function acceptRide(id){
-  if(!currentDriverId){ alert('Register as driver first'); showTab('driver'); return; }
-  await supabaseClient.from('rides').update({status:'accepted', driver_id:currentDriverId}).eq('id',id);
-  loadRides();
-}
-
-async function completeRide(id){
-  await supabaseClient.from('rides').update({status:'completed'}).eq('id',id);
-  loadRides();
-}
-
-// Auto load + realtime
-loadRides();
-supabaseClient.channel('rides-live').on('postgres_changes',{event:'*',schema:'public',table:'rides'},()=>loadRides()).subscribe();
-setInterval(loadRides, 8000);
-</script>
-</body>
-</html>
+<div class="gold-card gold-border p-5 rounded-[1.6rem]"><h3 class="gold-text font-black text-[11px] mb-4">MANAGE MEMBERS SAVINGS</h3><select id="adminMemberSelect" onchange="onAdminSelectMember()" class="w-full p-4 bg-[#FFF5F5] gold-border rounded-2xl font-bold text-[#4A0000] text-sm mb-4"><option value="">-- Select Member --</option></select><div id="adminSelectedInfo" class="gold-gradient text-white p-3 rounded-xl font-black text-center mb-4 hidden"></div><div id="adminEntryForm" class="hidden"><div class="grid grid-cols-2 gap-3 mb-4"><select id="aMonth" class="p-4 bg-[#FFF5F5] gold-border rounded-xl text-[#4A0000] text-xs font-bold"></select><
