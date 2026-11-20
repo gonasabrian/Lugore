@@ -1,259 +1,193 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SACCO App</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-body{background:#FBE9E9;font-family:Arial;color:#4A0000;padding:12px;margin:0}
-.card{background:#fff;border:1px solid #e5b8b8;border-radius:20px;padding:14px;margin:10px 0}
-.gold{background:linear-gradient(135deg,#A52A2A,#C25A5A);color:#fff}
-input,select{width:100%;padding:12px;border-radius:14px;border:1px solid #e5b8b8;margin:6px 0;background:#FFF5F5;box-sizing:border-box}
-button{padding:12px;border:0;border-radius:14px;font-weight:900;cursor:pointer}
-.btn{width:100%;padding:14px}.hidden{display:none}
-.tabs{display:flex;gap:6px;overflow-x:auto}.tabs button{flex:1;background:#fff;color:#800000;border:1px solid #e5b8b8;white-space:nowrap}.tabs button.active{background:#A52A2A;color:#fff}
-table{width:100%;border-collapse:collapse;font-size:12px} th,td{border:1px solid #eee;padding:6px;text-align:left}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stat{background:#FFF5F5;border-radius:14px;padding:10px;text-align:center}.stat b{display:block;color:#800000;font-size:16px}
-.green{background:#16a34a;color:#fff}.red{background:#dc2626;color:#fff}.grey{background:#fee2e2;color:#800000}
+*{box-sizing:border-box;font-family:system-ui,Arial}body{margin:0;background:#f3f4f6;color:#111}
+header{background:#111827;color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
+header b{font-size:18px}header button{background:#ef4444;color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
+.wrap{max-width:900px;margin:0 auto;padding:16px}
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+input,select{width:100%;padding:11px;border:1px solid #d1d5db;border-radius:9px;margin:6px 0;font-size:15px}
+button.btn{width:100%;padding:12px;border:0;border-radius:9px;background:#111827;color:#fff;font-weight:700;cursor:pointer;margin-top:6px}
+button.btn2{background:#059669}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:9px 8px;border-bottom:1px solid #eee;text-align:left}
+.tabs{display:flex;gap:8px;margin-bottom:12px}.tabs button{flex:1;padding:11px;border:0;border-radius:9px;background:#e5e7eb;cursor:pointer;font-weight:700}.tabs button.active{background:#111827;color:#fff}
+.hidden{display:none}.muted{color:#6b7280;font-size:13px}.big{font-size:28px;font-weight:800}
 </style>
 </head>
 <body>
-<h2 style="text-align:center;color:#800000;margin:6px">LUGORE STAFF<br>SAVINGS GROUP</h2>
-<p id="conn" style="text-align:center;font-size:12px">Connecting...</p>
-
-<div id="loginBox" class="card">
-<h3 style="text-align:center;margin:0">LOGIN</h3>
-<input id="username" placeholder="Username e.g. Admin">
-<input id="password" type="password" placeholder="Password">
-<button class="gold btn" onclick="doLogin()">LOGIN</button>
-<p id="loginMsg" style="text-align:center;color:red;font-size:12px"></p>
-<p style="text-align:center;font-size:11px">Admin / admin123</p>
+<header><b>SACCO Savings</b><span id="topUser"></span><button id="logoutBtn" class="hidden">Logout</button></header>
+<div class="wrap">
+<div id="loginView" class="card">
+<h2>Login</h2>
+<input id="loginName" placeholder="Username">
+<input id="loginPass" type="password" placeholder="Password">
+<button class="btn" onclick="login()">Login</button>
+<p id="loginMsg" style="color:red"></p>
 </div>
-
-<div id="appBox" class="hidden">
-<div class="card"><b id="welcome"></b> <span id="role"></span><br><button onclick="logout()" class="grey" style="width:100%;margin-top:8px">LOGOUT</button></div>
-
-<div class="tabs">
-<button id="tb-home" class="active" onclick="showTab('home')">HOME</button>
-<button id="tb-savings" onclick="showTab('savings')">SAVINGS</button>
-<button id="tb-loans" onclick="showTab('loans')">LOANS</button>
-<button id="tb-admin" onclick="showTab('admin')">ADMIN</button>
+<div id="appView" class="hidden">
+<div class="card"><div class="muted" id="welcome"></div><div class="big" id="totalLabel">UGX 0</div><div class="muted" id="totalSub"></div></div>
+<div id="adminTabs" class="tabs hidden">
+<button id="tabDash" class="active" onclick="showTab('dash')">Dashboard</button>
+<button onclick="showTab('members')">Members</button>
+<button onclick="showTab('addSaving')">Add Savings</button>
+<button onclick="showTab('addMember')">Add Member</button>
 </div>
-
-<!-- HOME -->
-<div id="tab-home">
-<div class="card"><h3 style="margin:0">MY SUMMARY</h3><div class="grid" style="margin-top:8px">
-<div class="stat">Total Saved<b id="myTotal">UGX 0</b></div>
-<div class="stat">Penalty<b id="myPen" style="color:red">UGX 0</b></div>
-<div class="stat">Performance<b id="myPerf">0%</b></div>
-<div class="stat">Loan Outstanding<b id="myOut" style="color:red">UGX 0</b></div>
-</div></div>
-<div class="card"><h3 style="margin:0">MY MONTHLY SAVINGS</h3><div id="myMonthly"></div></div>
-<div class="card"><h3 style="margin:0">MY LOANS</h3><div id="myLoans"></div></div>
-<div class="card"><h3 style="margin:0">GUARANTOR REQUESTS FOR ME</h3><div id="myGuar"></div></div>
+<div id="dashView">
+<div class="card"><h3 id="dashTitle">All Savings</h3><div id="allSavings"></div></div>
 </div>
-
-<!-- SAVINGS -->
-<div id="tab-savings" class="hidden">
-<div class="card"><h3 style="margin:0">Add Saving</h3>
+<div id="membersView" class="hidden">
+<div class="card"><h3>Members</h3><div id="membersList"></div></div>
+</div>
+<div id="addSavingView" class="hidden">
+<div class="card"><h3>Add Savings</h3>
 <select id="saveMember"></select>
-<select id="saveMonth"></select>
-<input id="saveDate" type="date">
 <input id="saveAmount" type="number" placeholder="Amount e.g. 50000">
-<p style="font-size:11px;color:red">Penalty: 3000 per month late. Due 10th next month.</p>
-<button class="gold btn" onclick="addSaving()">SAVE SAVING</button><p id="saveMsg"></p></div>
-<div class="card"><h3 style="margin:0">All Savings</h3><div id="savingsList"></div></div>
+<input id="saveNote" placeholder="Note e.g. March savings">
+<button class="btn btn2" onclick="addSaving()">Record Savings</button>
+<p id="saveMsg"></p></div>
 </div>
-
-<!-- LOANS -->
-<div id="tab-loans" class="hidden">
-<div class="card"><h3 style="margin:0">Apply for Loan</h3>
-<input id="loanAmount" type="number" placeholder="Amount e.g. 200000">
-<input id="loanReason" placeholder="Reason e.g. School fees">
-<select id="loanGuarantor"></select>
-<button class="gold btn" onclick="applyLoan()">SEND TO GUARANTOR</button><p id="loanMsg"></p></div>
-<div class="card"><h3 style="margin:0">My Applications</h3><div id="myApps"></div></div>
-<div class="card"><h3 style="margin:0">All Loans</h3><div id="allLoansList"></div></div>
-</div>
-
-<!-- ADMIN -->
-<div id="tab-admin" class="hidden">
-<div class="card"><h3 style="margin:0">ADMIN DASHBOARD</h3><div class="grid" style="margin-top:8px">
-<div class="stat">Total Savings<b id="aSav">UGX 0</b></div>
-<div class="stat">Total Loans<b id="aLoans">UGX 0</b></div>
-<div class="stat">Outstanding<b id="aOut">UGX 0</b></div>
-<div class="stat">Penalty Earnings<b id="aPen">UGX 0</b></div>
-<div class="stat">Cash At Hand<b id="aCash">UGX 0</b></div>
-<div class="stat">Members<b id="aMembers">0</b></div>
-</div></div>
-<div class="card"><h3 style="margin:0">Add Member</h3>
+<div id="addMemberView" class="hidden">
+<div class="card"><h3>Add Member</h3>
 <input id="newName" placeholder="Full Name">
-<input id="newPass" placeholder="Password">
-<select id="newRole"><option value="member">member</option><option value="admin">admin</option></select>
-<button class="gold btn" onclick="addMember()">ADD MEMBER</button><p id="memberMsg"></p></div>
-<div class="card"><h3 style="margin:0">Pending Applications - Approve</h3><div id="adminPending"></div></div>
-<div class="card"><h3 style="margin:0">Penalty Breakdown</h3><div id="penList"></div></div>
-<div class="card"><h3 style="margin:0">Record Loan Payment</h3>
-<select id="payLoan"></select>
-<input id="payAmount" type="number" placeholder="Pay Amount">
-<button class="gold btn" onclick="recordPay()">RECORD PAYMENT</button><p id="payMsg"></p></div>
-<div class="card"><h3 style="margin:0">All Members</h3><div id="membersList"></div></div>
+<input id="newPass" placeholder="Password / Number">
+<button class="btn btn2" onclick="addMember()">Add Member</button>
+<p id="memberMsg"></p></div>
+</div>
+<div id="memberView" class="hidden">
+<div class="card"><h3>My Savings</h3><p class="muted">You cannot add savings. Only Admin can record your savings.</p><div id="mySavings"></div></div>
 </div>
 </div>
-
+</div>
 <script>
-const supabaseClient = supabase.createClient("https://mpndeajnoxrmvpxtbrlo.supabase.co","sb_publishable_DHyal88n3SWkgeOn29k2tQ__AhyXEoD");
-const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
-const MONTH_ORDER=["December","January","February","March","April","May","June","July","August","September","October","November"];
-const MONTH_NUM={"January":0,"February":1,"March":2,"April":3,"May":4,"June":5,"July":6,"August":7,"September":8,"October":9,"November":10,"December":11};
-function calcPenalty(month,datePaid){
-  if(!month||!datePaid) return 0;
-  var d=new Date(datePaid); var mNum=MONTH_NUM[month];
-  var dueYear=d.getFullYear(); var dueMonth=mNum+1; if(dueMonth>11){dueMonth=0;dueYear++;}
-  if(mNum==11 && d.getMonth()==11){dueYear=d.getFullYear()+1;dueMonth=0;}
-  var due=new Date(dueYear,dueMonth,10); due.setHours(0,0,0,0); d.setHours(0,0,0,0);
-  if(d<=due) return 0;
-  var m=(d.getFullYear()-due.getFullYear())*12+(d.getMonth()-due.getMonth())+1;
-  return Math.max(1,m)*3000;
+const SUPABASE_URL="https://mpndeajnoxrmvpxtbrlo.supabase.co";
+const SUPABASE_KEY="sb_publishable_DHyal88n3SWkgeOn29k2tQ__AhyXEoD";
+const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let currentUser=null;
+let allMembers=[];
+function norm(s){return (s||"").trim().toLowerCase().replace(/\s+/g," ")}
+async function login(){
+const name=document.getElementById("loginName").value.trim();
+const pass=document.getElementById("loginPass").value.trim();
+document.getElementById("loginMsg").textContent="";
+if(!name||!pass){document.getElementById("loginMsg").textContent="Enter name and password";return}
+const {data,error}=await supabase.from("members").select("*");
+if(error){document.getElementById("loginMsg").textContent=error.message;return}
+const found=(data||[]).find(m=>norm(m.name)===norm(name)&&String(m.password)===String(pass));
+if(!found){document.getElementById("loginMsg").textContent="Wrong username or password";return}
+currentUser=found;
+localStorage.setItem("sacco_user",JSON.stringify(found));
+render();
 }
-function fmt(n){ return "UGX "+Number(n||0).toLocaleString(); }
-function norm(s){ return String(s||"").toLowerCase().replace(/\s/g,""); }
-let currentUser=null, allM=[], allS=[], allL=[], allA=[];
-
+function logout(){currentUser=null;localStorage.removeItem("sacco_user");render()}
+document.getElementById("logoutBtn").onclick=logout;
+async function render(){
+if(!currentUser){
+const saved=localStorage.getItem("sacco_user");
+if(saved){currentUser=JSON.parse(saved)}else{
+document.getElementById("loginView").classList.remove("hidden");
+document.getElementById("appView").classList.add("hidden");
+document.getElementById("logoutBtn").classList.add("hidden");
+document.getElementById("topUser").textContent="";return}}
+}
+document.getElementById("loginView").classList.add("hidden");
+document.getElementById("appView").classList.remove("hidden");
+document.getElementById("logoutBtn").classList.remove("hidden");
+document.getElementById("topUser").textContent=currentUser.name;
+document.getElementById("welcome").textContent="Logged in as "+currentUser.name+" ("+currentUser.role+")";
+const isAdmin=norm(currentUser.role)==="admin";
+if(isAdmin){
+document.getElementById("adminTabs").classList.remove("hidden");
+document.getElementById("memberView").classList.add("hidden");
+document.getElementById("dashView").classList.remove("hidden");
+showTab("dash");
+await loadAdmin();
+}else{
+document.getElementById("adminTabs").classList.add("hidden");
+document.getElementById("dashView").classList.add("hidden");
+document.getElementById("membersView").classList.add("hidden");
+document.getElementById("addSavingView").classList.add("hidden");
+document.getElementById("addMemberView").classList.add("hidden");
+document.getElementById("memberView").classList.remove("hidden");
+await loadMember();
+}
+}
 function showTab(t){
-  ['home','savings','loans','admin'].forEach(k=>{
-    document.getElementById('tab-'+k).classList.toggle('hidden', k!==t);
-    document.getElementById('tb-'+k).classList.toggle('active', k===t);
-  });
-  loadData();
+if(!currentUser||norm(currentUser.role)!=="admin")return;
+["dashView","membersView","addSavingView","addMemberView"].forEach(id=>document.getElementById(id).classList.add("hidden"));
+document.getElementById("tabDash").classList.remove("active");
+if(t==="dash")document.getElementById("dashView").classList.remove("hidden");
+if(t==="members")document.getElementById("membersView").classList.remove("hidden");
+if(t==="addSaving")document.getElementById("addSavingView").classList.remove("hidden");
+if(t==="addMember")document.getElementById("addMemberView").classList.remove("hidden");
 }
-async function doLogin(){
-  const u=document.getElementById('username').value.trim();
-  const p=document.getElementById('password').value.trim();
-  if(!u||!p){ document.getElementById('loginMsg').innerText='Fill name and password'; return; }
-  document.getElementById('loginMsg').innerText='Checking...';
-  const r=await supabaseClient.from('members').select('*');
-  if(r.error){ document.getElementById('loginMsg').innerText='Error: '+r.error.message; return; }
-  let found=null; for(let m of r.data){ if(norm(m.name)===norm(u)){ found=m; break; } }
-  if(!found){ document.getElementById('loginMsg').innerText='❌ User not found'; return; }
-  if(String(found.password).trim()!==p){ document.getElementById('loginMsg').innerText='❌ Wrong password'; return; }
-  currentUser=found; localStorage.setItem('lugore_user', JSON.stringify(found));
-  enterApp();
+async function loadAdmin(){
+const {data:members}=await supabase.from("members").select("*").order("name");
+allMembers=(members||[]).filter(m=>norm(m.role)!=="admin");
+const {data:savings}=await supabase.from("savings").select("*").order("created_at",{ascending:false});
+const total=(savings||[]).reduce((s,x)=>s+(Number(x.amount)||0),0);
+document.getElementById("totalLabel").textContent="UGX "+total.toLocaleString();
+document.getElementById("totalSub").textContent="Total Savings";
+document.getElementById("dashTitle").textContent="All Savings";
+let h="<table><tr><th>Member</th><th>Amount</th><th>Note</th><th>Date</th></tr>";
+(savings||[]).forEach(s=>{
+const m=allMembers.find(x=>x.id===s.member_id);
+h+="<tr><td>"+(m?m.name:"Unknown")+"</td><td>UGX "+(Number(s.amount)||0).toLocaleString()+"</td><td>"+(s.note||"")+"</td><td>"+new Date(s.created_at).toLocaleDateString()+"</td></tr>";
+});
+h+="</table>";
+document.getElementById("allSavings").innerHTML=h;
+let mh="<table><tr><th>Name</th><th>Password</th><th>Total Saved</th></tr>";
+allMembers.forEach(m=>{
+const tot=(savings||[]).filter(s=>s.member_id===m.id).reduce((a,b)=>a+(Number(b.amount)||0),0);
+mh+="<tr><td>"+m.name+"</td><td>"+m.password+"</td><td>UGX "+tot.toLocaleString()+"</td></tr>";
+});
+mh+="</table>";
+document.getElementById("membersList").innerHTML=mh;
+let opts="";
+allMembers.forEach(m=>{opts+='<option value="'+m.id+'">'+m.name+'</option>'});
+document.getElementById("saveMember").innerHTML=opts;
 }
-function enterApp(){
-  document.getElementById('loginBox').classList.add('hidden');
-  document.getElementById('appBox').classList.remove('hidden');
-  document.getElementById('welcome').innerText='Welcome, '+currentUser.name;
-  document.getElementById('role').innerText='('+currentUser.role+')';
-  showTab('home');
-}
-function logout(){ localStorage.removeItem('lugore_user'); location.reload(); }
-
-async function loadData(){
-  const m=await supabaseClient.from('members').select('*').order('name');
-  const s=await supabaseClient.from('savings').select('*').order('created_at',{ascending:false});
-  const l=await supabaseClient.from('loans').select('*').order('created_at',{ascending:false});
-  const a=await supabaseClient.from('applications').select('*').order('date',{ascending:false});
-  allM=m.data||[]; allS=s.data||[]; allL=l.data||[]; allA=a.data||[];
-  document.getElementById('conn').innerText='✅ Connected - '+allM.length+' members';
-  // selects
-  document.getElementById('saveMember').innerHTML=allM.map(x=>`<option value="${x.name}">${x.name}</option>`).join('');
-  if(currentUser) document.getElementById('saveMember').value=currentUser.name;
-  document.getElementById('saveMonth').innerHTML=MONTHS.map(x=>`<option value="${x}" ${x===MONTHS[new Date().getMonth()]?'selected':''}>${x}</option>`).join('');
-  document.getElementById('saveDate').value=new Date().toISOString().slice(0,10);
-  document.getElementById('loanGuarantor').innerHTML='<option value="">-- Select Guarantor --</option>'+allM.filter(x=>norm(x.name)!=='admin' && norm(x.name)!==norm(currentUser.name)).map(x=>`<option value="${x.name}">${x.name}</option>`).join('');
-  document.getElementById('payLoan').innerHTML='<option value="">-- Select Loan --</option>'+allL.filter(x=>Number(x.outstanding)>0).map(x=>`<option value="${x.id}">${x.member} - ${fmt(x.outstanding)}</option>`).join('');
-  // My summary
-  const me=currentUser.name;
-  const myS=allS.filter(x=>norm(x.member)===norm(me));
-  const total=myS.reduce((a,x)=>a+Number(x.amount||0),0);
-  const pen=myS.reduce((a,x)=>a+calcPenalty(x.month,x.date_paid),0);
-  let grouped={}; myS.forEach(x=>{ if(!grouped[x.month]) grouped[x.month]={month:x.month,date:x.date_paid,amount:0,penalty:0}; grouped[x.month].amount+=Number(x.amount||0); grouped[x.month].penalty+=calcPenalty(x.month,x.date_paid); grouped[x.month].date=x.date_paid; });
-  const rows=Object.values(grouped).sort((a,b)=>MONTH_ORDER.indexOf(a.month)-MONTH_ORDER.indexOf(b.month));
-  let cum=0; rows.forEach(r=>{ cum+=r.amount; r.total=cum; });
-  const paidMonths=rows.filter(r=>r.amount>0).length; const perf=Math.round(paidMonths/12*100);
-  document.getElementById('myTotal').innerText=fmt(total);
-  document.getElementById('myPen').innerText=fmt(pen);
-  document.getElementById('myPerf').innerText=perf+'% ('+paidMonths+'/12)';
-  const myL=allL.filter(x=>norm(x.member)===norm(me));
-  const out=myL.reduce((a,x)=>a+Number(x.outstanding||0),0);
-  document.getElementById('myOut').innerText=fmt(out);
-  document.getElementById('myMonthly').innerHTML='<table><tr><th>Month</th><th>Date</th><th>Amount</th><th>Total</th><th>Penalty</th></tr>'+rows.map(r=>`<tr><td>${r.month}</td><td>${r.date||''}</td><td>${fmt(r.amount)}</td><td>${fmt(r.total)}</td><td style="color:red">${fmt(r.penalty)}</td></tr>`).join('')+'</table>';
-  document.getElementById('myLoans').innerHTML=myL.length?'<table><tr><th>Principal</th><th>Total Due</th><th>Paid</th><th>Outstanding</th><th>Status</th></tr>'+myL.map(x=>`<tr><td>${fmt(x.principal)}</td><td>${fmt(x.total_due)}</td><td>${fmt(x.paid)}</td><td>${fmt(x.outstanding)}</td><td>${x.status}</td></tr>`).join('')+'</table>':'No loans';
-  // Guarantor
-  const req=allA.filter(x=>norm(x.guarantor)===norm(me) && String(x.guarantor_status).toLowerCase()==='pending');
-  document.getElementById('myGuar').innerHTML=req.length?req.map(x=>`<div class="card" style="background:#FFF5F5"><b>${x.member}</b> asks ${fmt(x.amount)} - ${x.reason||''}<br><button class="green" onclick="guar('${x.id}','Accepted')">ACCEPT</button> <button class="red" onclick="guar('${x.id}','Rejected')">REJECT</button></div>`).join(''):'No requests';
-  // Savings list
-  document.getElementById('savingsList').innerHTML='<table><tr><th>Member</th><th>Month</th><th>Date</th><th>Amount</th><th>Penalty</th></tr>'+allS.slice(0,50).map(x=>`<tr><td>${x.member}</td><td>${x.month}</td><td>${x.date_paid||''}</td><td>${fmt(x.amount)}</td><td>${fmt(calcPenalty(x.month,x.date_paid))}</td></tr>`).join('')+'</table>';
-  // My apps
-  const myA=allA.filter(x=>norm(x.member)===norm(me));
-  document.getElementById('myApps').innerHTML=myA.length?myA.map(x=>`<div style="border:1px solid #eee;border-radius:10px;padding:8px;margin:4px 0"><b>${fmt(x.amount)}</b> - ${x.reason||''}<br>Guarantor: ${x.guarantor} (${x.guarantor_status}) - Status: ${x.status}</div>`).join(''):'No applications';
-  document.getElementById('allLoansList').innerHTML='<table><tr><th>Member</th><th>Principal</th><th>Total Due</th><th>Outstanding</th><th>Status</th></tr>'+allL.map(x=>`<tr><td>${x.member}</td><td>${fmt(x.principal)}</td><td>${fmt(x.total_due)}</td><td>${fmt(x.outstanding)}</td><td>${x.status}</td></tr>`).join('')+'</table>';
-  // Admin
-  const totS=allS.reduce((a,x)=>a+Number(x.amount||0),0);
-  const totL=allL.reduce((a,x)=>a+Number(x.principal||0),0);
-  const totO=allL.reduce((a,x)=>a+Number(x.outstanding||0),0);
-  const totP=allS.reduce((a,x)=>a+calcPenalty(x.month,x.date_paid),0);
-  document.getElementById('aSav').innerText=fmt(totS);
-  document.getElementById('aLoans').innerText=fmt(totL);
-  document.getElementById('aOut').innerText=fmt(totO);
-  document.getElementById('aPen').innerText=fmt(totP);
-  document.getElementById('aCash').innerText=fmt(totS-totO);
-  document.getElementById('aMembers').innerText=allM.filter(x=>norm(x.name)!=='admin').length;
-  const pend=allA.filter(x=>String(x.status).toLowerCase()==='pending');
-  document.getElementById('adminPending').innerHTML=pend.length?pend.map(x=>`<div style="border:1px solid #eee;border-radius:10px;padding:8px;margin:4px 0"><b>${x.member}</b> - ${fmt(x.amount)} - Guarantor: ${x.guarantor} (${x.guarantor_status})<br>${x.guarantor_status==='Accepted'?`<button class="green" onclick="approve('${x.id}','${x.member}',${x.amount},'${x.guarantor}')">APPROVE LOAN</button>`:''} <button class="red" onclick="rejectApp('${x.id}')">REJECT</button></div>`).join(''):'No pending';
-  const penList=allS.filter(x=>calcPenalty(x.month,x.date_paid)>0).sort((a,b)=>calcPenalty(b.month,b.date_paid)-calcPenalty(a.month,a.date_paid));
-  document.getElementById('penList').innerHTML=penList.length?'<table><tr><th>Member</th><th>Month</th><th>Paid</th><th>Penalty</th><th>Fix</th></tr>'+penList.map(x=>`<tr><td>${x.member}</td><td>${x.month}</td><td>${x.date_paid||''}</td><td>${fmt(calcPenalty(x.month,x.date_paid))}</td><td><button onclick="fixDate('${x.id}','${x.month}')">FIX</button></td></tr>`).join('')+'</table>':'No penalties 🎉';
-  document.getElementById('membersList').innerHTML='<table><tr><th>Name</th><th>Role</th></tr>'+allM.map(x=>`<tr><td>${x.name}</td><td>${x.role}</td></tr>`).join('')+'</table>';
-}
-async function addMember(){
-  const n=document.getElementById('newName').value.trim(); const p=document.getElementById('newPass').value.trim(); const r=document.getElementById('newRole').value;
-  if(!n||!p){ alert('Fill name and password'); return; }
-  const res=await supabaseClient.from('members').insert([{name:n,password:p,role:r}]);
-  document.getElementById('memberMsg').innerText=res.error?'Error: '+res.error.message:'✅ Added '+n; loadData();
+async function loadMember(){
+const {data:savings}=await supabase.from("savings").select("*").eq("member_id",currentUser.id).order("created_at",{ascending:false});
+const total=(savings||[]).reduce((s,x)=>s+(Number(x.amount)||0),0);
+document.getElementById("totalLabel").textContent="UGX "+total.toLocaleString();
+document.getElementById("totalSub").textContent="My Total Savings";
+let h="<table><tr><th>Amount</th><th>Note</th><th>Date</th></tr>";
+(savings||[]).forEach(s=>{
+h+="<tr><td>UGX "+(Number(s.amount)||0).toLocaleString()+"</td><td>"+(s.note||"")+"</td><td>"+new Date(s.created_at).toLocaleDateString()+"</td></tr>";
+});
+h+="</table>";
+if((savings||[]).length===0)h="<p class='muted'>No savings yet.</p>";
+document.getElementById("mySavings").innerHTML=h;
 }
 async function addSaving(){
-  const member=document.getElementById('saveMember').value; const month=document.getElementById('saveMonth').value;
-  const date=document.getElementById('saveDate').value; const amt=Number(document.getElementById('saveAmount').value);
-  if(!amt){ alert('Enter amount'); return; }
-  if(norm(member)==='admin'){ alert('ADMIN CANNOT SAVE'); return; }
-  const pen=calcPenalty(month,date);
-  const res=await supabaseClient.from('savings').insert([{member:member,shares:1,month:month,date_paid:date,amount:amt,penalty:pen,total:amt}]);
-  document.getElementById('saveMsg').innerText=res.error?'Error: '+res.error.message:'✅ Saved! Penalty: '+fmt(pen); loadData();
+if(!currentUser||norm(currentUser.role)!=="admin"){alert("Only Admin can add savings");return}
+const member_id=document.getElementById("saveMember").value;
+const amount=Number(document.getElementById("saveAmount").value);
+const note=document.getElementById("saveNote").value.trim();
+if(!member_id||!amount){document.getElementById("saveMsg").textContent="Select member and amount";return}
+const {error}=await supabase.from("savings").insert([{member_id,amount,note}]);
+if(error){document.getElementById("saveMsg").textContent=error.message;return}
+document.getElementById("saveMsg").textContent="Saved!";
+document.getElementById("saveAmount").value="";document.getElementById("saveNote").value="";
+await loadAdmin();
 }
-async function applyLoan(){
-  const amt=Number(document.getElementById('loanAmount').value); const reason=document.getElementById('loanReason').value.trim(); const guar=document.getElementById('loanGuarantor').value;
-  if(!amt||!guar){ alert('Fill amount and guarantor'); return; }
-  if(norm(guar)===norm(currentUser.name)){ alert('You cannot be your own guarantor'); return; }
-  const res=await supabaseClient.from('applications').insert([{member:currentUser.name,amount:amt,reason:reason,guarantor:guar,status:'Pending',guarantor_status:'Pending'}]);
-  document.getElementById('loanMsg').innerText=res.error?'Error: '+res.error.message:'✅ Sent to guarantor'; loadData();
+async function addMember(){
+if(!currentUser||norm(currentUser.role)!=="admin"){alert("Only Admin can add members");return}
+const name=document.getElementById("newName").value.trim();
+const password=document.getElementById("newPass").value.trim();
+if(!name||!password){document.getElementById("memberMsg").textContent="Enter name and password";return}
+const {error}=await supabase.from("members").insert([{name,password,role:"member"}]);
+if(error){document.getElementById("memberMsg").textContent=error.message;return}
+document.getElementById("memberMsg").textContent="Member added!";
+document.getElementById("newName").value="";document.getElementById("newPass").value="";
+await loadAdmin();
 }
-async function guar(id, action){ await supabaseClient.from('applications').update({guarantor_status:action, status: action==='Accepted'?'Pending':'Rejected'}).eq('id',id); alert(action); loadData(); }
-async function rejectApp(id){ await supabaseClient.from('applications').update({status:'Rejected'}).eq('id',id); loadData(); }
-async function approve(appId, member, amount, guarantor){
-  const interest=Math.round(amount*0.10); const totalDue=amount+interest; const due=new Date(); due.setMonth(due.getMonth()+3);
-  await supabaseClient.from('applications').update({status:'Accepted'}).eq('id',appId);
-  await supabaseClient.from('loans').insert([{member:member,principal:amount,date_given:new Date().toISOString().slice(0,10),interest:interest,total_due:totalDue,due_date:due.toISOString().slice(0,10),paid:0,outstanding:totalDue,status:'Active',guarantor:guarantor}]);
-  alert('Loan Approved: '+fmt(totalDue)); loadData();
-}
-async function recordPay(){
-  const id=document.getElementById('payLoan').value; const amt=Number(document.getElementById('payAmount').value);
-  if(!id||!amt){ alert('Select loan and amount'); return; }
-  const loan=allL.find(x=>x.id===id);
-  const newPaid=Number(loan.paid||0)+amt; const newOut=Math.max(0, Number(loan.outstanding||0)-amt);
-  await supabaseClient.from('loans').update({paid:newPaid,outstanding:newOut,status:newOut===0?'Completed':'Active'}).eq('id',id);
-  await supabaseClient.from('payments_log').insert([{member:loan.member,old_principal:loan.principal,old_interest:loan.interest,pay_amount:amt,pay_date:new Date().toISOString().slice(0,10),new_principal:Math.max(0,Number(loan.principal)-amt),new_interest:loan.interest,new_total:newOut}]);
-  document.getElementById('payMsg').innerText='✅ Payment recorded - Outstanding: '+fmt(newOut); loadData();
-}
-async function fixDate(id, month){
-  const nd=prompt('Enter CORRECT date for '+month+' (yyyy-mm-dd):', new Date().toISOString().slice(0,10));
-  if(!nd) return;
-  await supabaseClient.from('savings').update({date_paid:nd,penalty:calcPenalty(month,nd)}).eq('id',id);
-  alert('Fixed! New Penalty: '+fmt(calcPenalty(month,nd))); loadData();
-}
-// Auto login + conn check
-const saved=localStorage.getItem('lugore_user');
-if(saved){ try{ currentUser=JSON.parse(saved); enterApp(); }catch(e){ localStorage.removeItem('lugore_user'); } }
-else{ supabaseClient.from('members').select('*').then(r=>{ document.getElementById('conn').innerText=r.error?'❌ '+r.error.message:'✅ Connected - '+r.data.length+' members'; }); }
+render();
 </script>
 </body>
 </html>
