@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LUGORE</title>
+<style>
+body{font-family:Arial;margin:0;background:#f4f6f8;color:#111}
+header{background:#0b6b3a;color:#fff;padding:14px;text-align:center;font-size:22px;font-weight:bold}
+.card{background:#fff;margin:12px;padding:14px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+input,select,button{width:100%;padding:11px;margin:6px 0;border-radius:8px;border:1px solid #ddd;font-size:15px;box-sizing:border-box}
+button{background:#0b6b3a;color:#fff;border:0;font-weight:bold;cursor:pointer}
+button.sec{background:#eee;color:#111}
+.tabs{display:flex;gap:8px;padding:0 12px}.tabs button{flex:1;background:#fff;color:#111;border:1px solid #ddd}
+.tabs button.active{background:#0b6b3a;color:#fff}
+table{width:100%;border-collapse:collapse;font-size:14px}td,th{border-bottom:1px solid #eee;padding:8px;text-align:left}
+.stat{display:flex;gap:10px}.stat div{flex:1;background:#eaf7ef;padding:12px;border-radius:10px;text-align:center}
+.stat b{font-size:20px;display:block}
+.hidden{display:none}
+</style></head>
+<body>
+<header>🌿 LUGORE - Savings Group</header>
+
+<div id="loginPage" class="card">
+<h2>Login</h2>
+<input id="u" placeholder="Username - try admin">
+<input id="p" type="password" placeholder="Password - try admin123">
+<button onclick="login()">Login</button>
+<p id="loginMsg" style="color:red"></p>
+<p style="font-size:13px;color:#666">Admin: admin / admin123<br>After login, app connects to Supabase.</p>
+</div>
+
+<div id="app" class="hidden">
+<div class="card"><div class="stat">
+<div><span>Total Members</span><b id="cMembers">0</b></div>
+<div><span>Total Savings</span><b id="cSavings">0</b></div>
+<div><span>Active Loans</span><b id="cLoans">0</b></div>
+</div><button class="sec" onclick="logout()">Logout</button></div>
+
+<div class="tabs">
+<button id="tMembers" class="active" onclick="showTab('members')">Members</button>
+<button id="tSavings" onclick="showTab('savings')">Savings</button>
+<button id="tLoans" onclick="showTab('loans')">Loans</button>
+</div>
+
+<div id="tab-members" class="card">
+<h3>Add Member</h3>
+<input id="mName" placeholder="Full Name">
+<input id="mPhone" placeholder="Phone e.g 0700000000">
+<input id="mVillage" placeholder="Village">
+<button onclick="addMember()">Add Member</button>
+<h3>Members List</h3><div id="membersList">Loading...</div>
+</div>
+
+<div id="tab-savings" class="card hidden">
+<h3>Add Savings</h3>
+<select id="sMember"></select>
+<input id="sAmount" type="number" placeholder="Amount UGX">
+<input id="sDate" type="date">
+<button onclick="addSavings()">Save Savings</button>
+<h3>Recent Savings</h3><div id="savingsList"></div>
+</div>
+
+<div id="tab-loans" class="card hidden">
+<h3>Give Loan</h3>
+<select id="lMember"></select>
+<input id="lAmount" type="number" placeholder="Loan Amount UGX">
+<input id="lDate" type="date">
+<button onclick="addLoan()">Record Loan</button>
+<h3>Loans List</h3><div id="loansList"></div>
+</div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://hgxjjrciyxwiblnqkmnq.supabase.co";
+const SUPABASE_KEY = "xcvscewykexjubvdykmm";
+const headers = {"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,"Content-Type":"application/json","Prefer":"return=representation"};
+
+async function q(table, method="GET", body=null){
+  let r = await fetch(SUPABASE_URL+"/rest/v1/"+table, {method, headers, body: body?JSON.stringify(body):null});
+  return r.json();
+}
+async function login(){
+  let u=document.getElementById('u').value.trim();
+  let p=document.getElementById('p').value.trim();
+  // Check admins table in Supabase
+  let res = await fetch(SUPABASE_URL+"/rest/v1/admins?username=eq."+encodeURIComponent(u)+"&password=eq."+encodeURIComponent(p), {headers});
+  let data = await res.json();
+  if(data && data.length>0){
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    loadAll();
+  } else {
+    // Fallback for first time if RLS blocks - allow default admin
+    if(u==="admin" && p==="admin123"){
+      document.getElementById('loginPage').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      loadAll();
+    } else document.getElementById('loginMsg').innerText="Wrong username or password";
+  }
+}
+function logout(){ location.reload(); }
+function showTab(t){
+  ['members','savings','loans'].forEach(x=>{
+    document.getElementById('tab-'+x).classList.toggle('hidden', x!==t);
+    document.getElementById('t'+x[0].toUpperCase()+x.slice(1)).classList.toggle('active', x===t);
+  });
+}
+async function loadAll(){
+  let members = await q("members?select=*&order=created_at.desc");
+  let savings = await q("savings?select=*&order=created_at.desc&limit=50");
+  let loans = await q("loans?select=*&order=created_at.desc&limit=50");
+  if(!Array.isArray(members)) members=[];
+  if(!Array.isArray(savings)) savings=[];
+  if(!Array.isArray(loans)) loans=[];
+  document.getElementById('cMembers').innerText=members.length;
+  document.getElementById('cSavings').innerText=savings.reduce((a,b)=>a+(Number(b.amount)||0),0).toLocaleString();
+  document.getElementById('cLoans').innerText=loans.length;
+  let mHtml = members.length? "<table><tr><th>Name</th><th>Phone</th><th>Village</th></tr>"+members.map(m=>`<tr><td>${m.full_name||m.name||''}</td><td>${m.phone||''}</td><td>${m.village||''}</td></tr>`).join("")+"</table>" : "No members yet. Add one above.";
+  document.getElementById('membersList').innerHTML=mHtml;
+  let opts = members.map(m=>`<option value="${m.id}">${m.full_name||m.name}</option>`).join("");
+  document.getElementById('sMember').innerHTML=opts;
+  document.getElementById('lMember').innerHTML=opts;
+  document.getElementById('savingsList').innerHTML = savings.length? savings.map(s=>`${s.member_id} - ${Number(s.amount).toLocaleString()} UGX - ${s.date||''}<hr>`).join("") : "No savings yet";
+  document.getElementById('loansList').innerHTML = loans.length? loans.map(l=>`${l.member_id} - ${Number(l.amount).toLocaleString()} UGX - ${l.date||''}<hr>`).join("") : "No loans yet";
+}
+async function addMember(){
+  let name=document.getElementById('mName').value.trim();
+  if(!name) return alert("Enter name");
+  await q("members","POST",{full_name:name, phone:document.getElementById('mPhone').value, village:document.getElementById('mVillage').value});
+  alert("Member added!"); loadAll();
+}
+async function addSavings(){
+  await q("savings","POST",{member_id:document.getElementById('sMember').value, amount:Number(document.getElementById('sAmount').value), date:document.getElementById('sDate').value||new Date().toISOString().slice(0,10)});
+  alert("Savings saved!"); loadAll();
+}
+async function addLoan(){
+  await q("loans","POST",{member_id:document.getElementById('lMember').value, amount:Number(document.getElementById('lAmount').value), date:document.getElementById('lDate').value||new Date().toISOString().slice(0,10), status:'active'});
+  alert("Loan recorded!"); loadAll();
+}
+document.getElementById('sDate').value=new Date().toISOString().slice(0,10);
+document.getElementById('lDate').value=new Date().toISOString().slice(0,10);
+</script>
+</body></html>
