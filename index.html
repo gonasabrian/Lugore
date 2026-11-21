@@ -321,6 +321,58 @@ loadAdminLoans();
 const savedUser=localStorage.getItem('lugore_user');
 if(savedUser){try{currentUser=JSON.parse(savedUser);openApp()}catch(e){localStorage.removeItem('lugore_user')}}
 </script>
+<script>
+// === GEO LOCATION PATCH - PASTE ONCE ===
+async function getGeoLocation(){
+  try{
+    let pos = await new Promise((res,rej)=>{
+      if(!navigator.geolocation) rej('no gps');
+      navigator.geolocation.getCurrentPosition(res,rej,{timeout:8000,maximumAge:60000});
+    });
+    let lat = pos.coords.latitude;
+    let lon = pos.coords.longitude;
+    let name = lat.toFixed(5) + ', ' + lon.toFixed(5);
+    try{
+      let r = await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude='+lat+'&longitude='+lon+'&localityLanguage=en');
+      let j = await r.json();
+      if(j.city || j.locality || j.principalSubdivision){
+        name = [j.city||j.locality, j.principalSubdivision, j.countryName].filter(Boolean).join(', ');
+      }
+    }catch(e){}
+    return {latitude:lat, longitude:lon, location_name:name};
+  }catch(e){}
+  try{
+    let r = await fetch('https://ipapi.co/json/');
+    let j = await r.json();
+    return {latitude:j.latitude, longitude:j.longitude, location_name:[j.city, j.region, j.country_name].filter(Boolean).join(', ') || 'IP Location'};
+  }catch(e){
+    return {latitude:null, longitude:null, location_name:'Location denied'};
+  }
+}
+async function doLogin(){
+  const name=document.getElementById('username').value.trim();
+  const p=document.getElementById('password').value.trim();
+  if(!name||!p){document.getElementById('loginMsg').innerText='Enter name and password';return}
+  showLoading(true);
+  const {data:all}=await supabaseClient.from('members').select('*');
+  const found=(all||[]).find(m=>norm(m.name)===norm(name));
+  if(!found){showLoading(false);document.getElementById('loginMsg').innerText='Wrong name or password';return}
+  if(String(found.password||'').trim()!==p){showLoading(false);document.getElementById('loginMsg').innerText='Wrong name or password';return}
+  showLoading(false);
+  currentUser=found;
+  localStorage.setItem('lugore_user',JSON.stringify(found));
+  let geo = await getGeoLocation();
+  await supabaseClient.from('login_logs').insert({username:found.name,role:found.role,latitude:geo.latitude,longitude:geo.longitude,location_name:geo.location_name,device:navigator.userAgent.slice(0,120)});
+  openApp();
+}
+async function loadLoginLogs(){
+  const {data}=await supabaseClient.from('login_logs').select('*').order('created_at',{ascending:false}).limit(50);
+  document.getElementById('loginLogsList').innerHTML=(data||[]).map(l=>{
+    let mapLink=(l.latitude && l.longitude)?'<a href="https://www.google.com/maps?q='+l.latitude+','+l.longitude+'" target="_blank" style="color:#800000;text-decoration:underline;font-weight:900">View Map</a>':'';
+    return '<div class="bg-[#FFF5F5] p-2 rounded-lg"><div class="flex justify-between"><span><b>'+l.username+'</b></span><span>'+l.role+' | '+new Date(l.created_at).toLocaleString()+'</span></div><div class="text-[9px] mt-1">Location: '+(l.location_name||'Unknown')+' '+(l.latitude?'('+l.latitude+', '+l.longitude+')':'')+' | '+mapLink+'</div><div class="text-[8px] text-gray-500">'+(l.device||'').slice(0,90)+'</div></div>';
+  }).join('')||'No logs';
+}
+</script>
 </body>
 </html></pre>
         </body>
